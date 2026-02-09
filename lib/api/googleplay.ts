@@ -11,27 +11,41 @@ export interface GooglePlayReview {
   version: string;
 }
 
-export async function fetchGooglePlayReviews(): Promise<GooglePlayReview[]> {
-  try {
-    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    const packageName = process.env.GOOGLE_PLAY_PACKAGE!;
+function getAuth() {
+  // Try base64-encoded credentials first (Vercel)
+  const credentialsBase64 = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64;
+  if (credentialsBase64) {
+    const credentials = JSON.parse(
+      Buffer.from(credentialsBase64, "base64").toString("utf-8")
+    );
+    return new google.auth.GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/androidpublisher"],
+    });
+  }
 
-    if (!credentialsPath) {
-      throw new Error("GOOGLE_APPLICATION_CREDENTIALS not set");
-    }
-
-    // Authenticate with Google
-    const auth = new google.auth.GoogleAuth({
+  // Fallback to file path (local dev)
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (credentialsPath) {
+    return new google.auth.GoogleAuth({
       keyFile: credentialsPath,
       scopes: ["https://www.googleapis.com/auth/androidpublisher"],
     });
+  }
+
+  throw new Error("No Google credentials configured");
+}
+
+export async function fetchGooglePlayReviews(): Promise<GooglePlayReview[]> {
+  try {
+    const packageName = process.env.GOOGLE_PLAY_PACKAGE || "com.shinobiapp.shinobi";
+    const auth = getAuth();
 
     const androidpublisher = google.androidpublisher({
       version: "v3",
       auth,
     });
 
-    // Fetch reviews
     const response = await androidpublisher.reviews.list({
       packageName,
       maxResults: 50,
@@ -41,19 +55,19 @@ export async function fetchGooglePlayReviews(): Promise<GooglePlayReview[]> {
       return [];
     }
 
-    return response.data.reviews.map((review: any) => {
-      const comment = review.comments[0].userComment;
+    return response.data.reviews.map((review) => {
+      const comment = review.comments?.[0]?.userComment;
       return {
-        id: review.reviewId,
-        rating: comment.starRating,
+        id: review.reviewId || "",
+        rating: comment?.starRating || 0,
         title: "",
-        body: comment.text,
+        body: comment?.text || "",
         reviewerNickname: review.authorName || "Anonymous",
-        createdDate: comment.lastModified?.seconds
-          ? new Date(comment.lastModified.seconds * 1000).toISOString()
+        createdDate: comment?.lastModified?.seconds
+          ? new Date(Number(comment.lastModified.seconds) * 1000).toISOString()
           : new Date().toISOString(),
-        platform: "android",
-        version: comment.appVersionName || "Unknown",
+        platform: "android" as const,
+        version: comment?.appVersionName || "Unknown",
       };
     });
   } catch (error) {
