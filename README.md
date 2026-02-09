@@ -1,47 +1,76 @@
-# Shinobi Japanese - Performance Monitoring Dashboard
+# 🥷 Shinobi Dashboard
 
-**Live Monitoring Dashboard** for Shinobi Japanese app metrics.
+A premium, dark-themed SaaS analytics dashboard for Shinobi Japanese language learning app. Built with Next.js 16, TypeScript, Tailwind CSS, and Framer Motion.
 
-## 📊 Features
+![Dashboard Preview](https://via.placeholder.com/1200x600/0a0a0f/6366f1?text=Shinobi+Dashboard)
 
-### Quick Stats (Top Row)
-- **MRR** - Monthly Recurring Revenue
-- **Active Users** - Weekly active users
-- **Crash-Free Rate** - Last 7 days stability
-- **Avg Rating** - Combined Play Store + App Store
+## ✨ Features
 
-### Widgets
+### 📊 Dashboard Overview
+- **KPI Cards** with real-time metrics:
+  - Monthly Recurring Revenue (MRR)
+  - Active Subscribers
+  - Crash-Free Rate
+  - Average App Rating
+- **Trend indicators** showing month-over-month changes
+- **Interactive charts** for revenue and user growth
+- **Recent activity** summaries for reviews and errors
 
-1. **RevenueCat Metrics** 💵
-   - MRR (current + goal)
-   - Subscribers count
-   - Churn rate
-   - LTV (Lifetime Value)
+### 💰 Revenue Analytics
+- **MRR Trends** - Track monthly recurring revenue over time
+- **Subscriber Growth** - Monitor active subscription growth
+- **Plan Breakdown** - Revenue distribution by subscription type (Monthly/Annual/Lifetime)
+- Real-time integration with **RevenueCat API**
 
-2. **Sentry Errors** 🐛
-   - Top 3 unresolved errors
-   - Event counts
-   - Affected users
-   - Last seen timestamps
-   - Direct links to Sentry
+### ⭐ Reviews Management
+- **Unified review feed** from App Store and Google Play
+- **Rating distribution** with visual breakdown
+- **Platform statistics** - iOS vs Android metrics
+- **Review cards** with star ratings, user info, and app version
+- Real-time integration with **App Store Connect** and **Google Play APIs**
 
-3. **Google Play Reviews** 🤖
-   - Recent reviews
-   - Ratings + version + device
-   - Quick insights
+### 🐛 Error Tracking
+- **Sentry integration** for real-time error monitoring
+- **Error severity levels** (error, warning, info)
+- **Event counts** and affected user statistics
+- **Quick navigation** to specific error details
+- Real-time integration with **Sentry API**
 
-4. **App Store Reviews** 🍎
-   - Recent reviews
-   - Ratings + version + device
-   - Quick insights
+### 🎨 Design Features
+- **Dark mode only** - Premium dark theme with custom color palette
+- **Smooth animations** - Framer Motion for page transitions and interactions
+- **Responsive design** - Works on desktop, tablet, and mobile
+- **Collapsible sidebar** - Adaptive navigation with expand/collapse
+- **Mobile-friendly** - Touch-optimized with mobile menu
+- **Skeleton loading states** - Graceful loading experience
+- **Error handling** - Fallback to cached data with clear error banners
 
-## 🚀 Development
+## 🚀 Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS 3
+- **UI Components**: shadcn/ui
+- **Charts**: Recharts
+- **Animations**: Framer Motion
+- **APIs**:
+  - RevenueCat (subscription metrics)
+  - Sentry (error tracking)
+  - App Store Connect (iOS reviews)
+  - Google Play (Android reviews)
+
+## 📦 Installation
 
 ```bash
 # Install dependencies
 npm install
 
-# Run dev server
+# Copy environment variables
+cp .env.example .env.local
+
+# Add your API credentials to .env.local
+
+# Run development server
 npm run dev
 
 # Build for production
@@ -51,144 +80,145 @@ npm run build
 npm start
 ```
 
-## 📡 Data Sources (Currently Mock)
+## 🔑 Environment Variables
 
-**To connect real data:**
+```env
+# RevenueCat
+REVENUECAT_API_KEY=sk_...
 
-1. **Sentry API**
-   ```typescript
-   // Add to components/SentryWidget.tsx
-   const SENTRY_TOKEN = process.env.SENTRY_TOKEN;
-   const response = await fetch(
-     'https://sentry.io/api/0/projects/shinobi-japanese/shinobi-japanese-react-native/issues/?query=is:unresolved',
-     { headers: { Authorization: `Bearer ${SENTRY_TOKEN}` } }
-   );
-   ```
+# Sentry
+SENTRY_TOKEN=sntryu_...
+SENTRY_ORG=shinobi-japanese
+SENTRY_PROJECT=shinobi-japanese-react-native
 
-2. **RevenueCat API**
-   ```typescript
-   // Add to components/RevenueCatWidget.tsx
-   const REVENUECAT_KEY = process.env.REVENUECAT_SECRET_KEY;
-   const response = await fetch(
-     'https://api.revenuecat.com/v1/subscribers',
-     { headers: { Authorization: `Bearer ${REVENUECAT_KEY}` } }
-   );
-   ```
+# App Store Connect
+APPSTORE_KEY_ID=8VY82RZ6RY
+APPSTORE_ISSUER_ID=aff10297-...
+APPSTORE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
 
-3. **Google Play Console API**
-   ```typescript
-   // Use service account credentials
-   // See: skills/googleplay/SKILL.md
-   ```
-
-4. **App Store Connect API**
-   ```typescript
-   // Use JWT authentication
-   // See: skills/appstore/SKILL.md
-   ```
-
-## 🔐 Environment Variables
-
-Create `.env.local`:
-
-```bash
-SENTRY_TOKEN=your_token
-REVENUECAT_SECRET_KEY=your_key
-GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account.json
-APPSTORE_ISSUER_ID=your_issuer_id
-APPSTORE_KEY_ID=your_key_id
-APPSTORE_PRIVATE_KEY=your_private_key
+# Google Play
+GOOGLE_PLAY_PACKAGE=com.shinobiapp.shinobi
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/firebase-shinobi.json
 ```
 
-## 📦 Deployment
+## 📁 Project Structure
 
-### Option 1: Vercel (Recommended)
+```
+app/
+├── api/                    # API routes
+│   ├── revenue/           # RevenueCat integration
+│   ├── reviews/           # App Store + Google Play
+│   ├── sentry/            # Sentry error tracking
+│   └── stats/             # Aggregated statistics
+├── dashboard/             # Dashboard pages
+│   ├── page.tsx           # Overview
+│   ├── revenue/           # Revenue analytics
+│   ├── reviews/           # Review management
+│   └── errors/            # Error tracking
+└── layout.tsx             # Root layout
+
+components/
+├── layout/                # Layout components
+│   ├── sidebar.tsx        # Navigation sidebar
+│   ├── header.tsx         # Top header
+│   └── page-transition.tsx # Page animations
+├── dashboard/             # Dashboard components
+│   ├── kpi-cards.tsx      # Metric cards
+│   ├── mrr-chart.tsx      # Revenue chart
+│   ├── user-chart.tsx     # User growth chart
+│   ├── reviews-summary.tsx # Recent reviews
+│   └── errors-summary.tsx  # Top errors
+├── revenue/               # Revenue components
+│   ├── mrr-chart.tsx
+│   ├── subscriber-chart.tsx
+│   └── plan-breakdown.tsx
+├── reviews/               # Review components
+│   ├── review-card.tsx
+│   └── platform-stats.tsx
+└── errors/                # Error components
+    └── error-list.tsx
+
+lib/
+├── api/                   # API clients
+│   ├── revenuecat.ts
+│   ├── sentry.ts
+│   ├── appstore.ts
+│   └── googleplay.ts
+└── utils.ts               # Utility functions
+```
+
+## 🎨 Color Palette
+
+```css
+/* Dark Theme */
+--background: #0a0a0f     /* Near black */
+--card: #111118           /* Card background */
+--border: #1e1e2e         /* Subtle borders */
+--primary: #6366f1        /* Indigo accent */
+--success: #22c55e        /* Green */
+--warning: #f59e0b        /* Amber */
+--error: #ef4444          /* Red */
+--text-primary: #f1f5f9   /* White-ish */
+--text-secondary: #94a3b8 /* Slate */
+```
+
+## 🔒 Security
+
+- API keys stored in environment variables
+- JWT authentication for App Store Connect
+- Service account auth for Google Play
+- No sensitive data in client-side code
+- HTTPS-only in production
+
+## 📈 Performance
+
+- Server-side rendering for initial load
+- Client-side data fetching for real-time updates
+- Optimized bundle size
+- Lazy loading for components
+- Cached API responses with fallbacks
+
+## 🚢 Deployment
+
+Deployed on **Vercel** with automatic deployments from `master` branch:
 
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
+# Manual deployment
 vercel --prod
+
+# View deployments
+vercel ls shinobi-dashboard
 ```
 
-### Option 2: Docker
+## 📝 Development Checklist
 
-```bash
-# Build Docker image
-docker build -t shinobi-dashboard .
+- [x] Dark mode theme
+- [x] Responsive layout (desktop, tablet, mobile)
+- [x] TypeScript strict mode
+- [x] API integrations (RevenueCat, Sentry, App Store, Google Play)
+- [x] KPI cards with trends
+- [x] Interactive charts
+- [x] Review management
+- [x] Error tracking
+- [x] Page transitions
+- [x] Loading states
+- [x] Error handling
+- [x] Mobile sidebar
+- [x] Vercel deployment
 
-# Run container
-docker run -p 3000:3000 shinobi-dashboard
-```
+## 🐛 Known Issues
 
-### Option 3: Self-Hosted
+- App Store Connect and Google Play APIs may return cached data during API downtime
+- Rate limits apply to external APIs (check respective documentation)
 
-```bash
-# Build
-npm run build
+## 📄 License
 
-# Start with PM2
-pm2 start npm --name "shinobi-dashboard" -- start
-```
+Private - All rights reserved
 
-## 🎨 Customization
+## 👤 Author
 
-### Update Metrics
-
-Edit `components/QuickStats.tsx` to add/remove metrics.
-
-### Add New Widgets
-
-1. Create component in `components/`
-2. Import in `app/page.tsx`
-3. Add to grid
-
-Example:
-```typescript
-// components/FirebaseWidget.tsx
-export default function FirebaseWidget() {
-  return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2>Firebase Performance</h2>
-      {/* Your content */}
-    </div>
-  );
-}
-```
-
-## 📊 Future Enhancements
-
-- [ ] Real-time data (WebSockets)
-- [ ] Historical charts (Chart.js)
-- [ ] Alerts/notifications
-- [ ] User authentication
-- [ ] Custom date ranges
-- [ ] Export reports (PDF/CSV)
-- [ ] Dark mode
-- [ ] Mobile responsive improvements
-
-## 🆘 Troubleshooting
-
-**Build fails with TypeScript errors:**
-```bash
-rm -rf .next
-npm run build
-```
-
-**Components not updating:**
-```bash
-rm -rf .next
-npm run dev
-```
-
-**API rate limits:**
-- Implement caching (Redis/Upstash)
-- Add request throttling
+Built for Shinobi Japanese language learning app
 
 ---
 
-**Created:** 2026-02-05  
-**Status:** ✅ Production-ready (with mock data)  
-**Tech Stack:** Next.js 16 + TypeScript + Tailwind CSS  
-**Deployment:** Ready for Vercel
+**Last Updated**: February 2026
