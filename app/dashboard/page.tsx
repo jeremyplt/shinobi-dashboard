@@ -1,5 +1,9 @@
 import { KPICards } from "@/components/dashboard/kpi-cards";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardMRRChart } from "@/components/dashboard/mrr-chart";
+import { UserGrowthChart } from "@/components/dashboard/user-chart";
+import { ReviewsSummary } from "@/components/dashboard/reviews-summary";
+import { ErrorsSummary } from "@/components/dashboard/errors-summary";
+import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 
 async function getStats() {
@@ -51,54 +55,16 @@ export default async function DashboardPage() {
       {/* KPI Cards */}
       <KPICards stats={stats} />
 
-      {/* Placeholder for charts */}
+      {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-[#111118] border-[#1e1e2e]">
-          <CardHeader>
-            <CardTitle className="text-[#f1f5f9]">Revenue Trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
-              Chart coming soon...
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#111118] border-[#1e1e2e]">
-          <CardHeader>
-            <CardTitle className="text-[#f1f5f9]">User Growth</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
-              Chart coming soon...
-            </div>
-          </CardContent>
-        </Card>
+        <DashboardMRRChart />
+        <UserGrowthChart />
       </div>
 
       {/* Recent Activity */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-[#111118] border-[#1e1e2e]">
-          <CardHeader>
-            <CardTitle className="text-[#f1f5f9]">Recent Reviews</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-[#94a3b8]">
-              No recent reviews to display
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#111118] border-[#1e1e2e]">
-          <CardHeader>
-            <CardTitle className="text-[#f1f5f9]">Top Errors</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-[#94a3b8]">
-              No errors to display
-            </div>
-          </CardContent>
-        </Card>
+        <ReviewsSummary />
+        <ErrorsSummary />
       </div>
     </div>
   );
