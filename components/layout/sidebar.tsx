@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -11,6 +11,7 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,14 +24,16 @@ const navigation = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
-  return (
-    <motion.div
-      initial={false}
-      animate={{ width: collapsed ? 64 : 240 }}
-      className="fixed left-0 top-0 h-full bg-[#111118] border-r border-[#1e1e2e] flex flex-col"
-    >
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  const SidebarContent = () => (
+    <>
       {/* Logo */}
       <div className="h-16 flex items-center justify-center border-b border-[#1e1e2e]">
         <motion.div
@@ -52,6 +55,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={() => setMobileOpen(false)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                 isActive
@@ -75,10 +79,10 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Collapse Toggle */}
+      {/* Collapse Toggle (Desktop only) */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="h-12 flex items-center justify-center border-t border-[#1e1e2e] text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+        className="hidden md:flex h-12 items-center justify-center border-t border-[#1e1e2e] text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
       >
         {collapsed ? (
           <ChevronRight className="w-5 h-5" />
@@ -86,6 +90,58 @@ export function Sidebar() {
           <ChevronLeft className="w-5 h-5" />
         )}
       </button>
-    </motion.div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <motion.div
+        initial={false}
+        animate={{ width: collapsed ? 64 : 240 }}
+        className="hidden md:flex fixed left-0 top-0 h-full bg-[#111118] border-r border-[#1e1e2e] flex-col z-50"
+      >
+        <SidebarContent />
+      </motion.div>
+
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setMobileOpen(!mobileOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-[#111118] border border-[#1e1e2e] text-[#f1f5f9]"
+      >
+        {mobileOpen ? (
+          <X className="w-5 h-5" />
+        ) : (
+          <LayoutDashboard className="w-5 h-5" />
+        )}
+      </button>
+
+      {/* Mobile Sidebar */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden fixed inset-0 bg-black/50 z-40"
+            />
+
+            {/* Sidebar */}
+            <motion.div
+              initial={{ x: -240 }}
+              animate={{ x: 0 }}
+              exit={{ x: -240 }}
+              transition={{ type: "spring", damping: 20 }}
+              className="md:hidden fixed left-0 top-0 h-full w-64 bg-[#111118] border-r border-[#1e1e2e] flex flex-col z-50"
+            >
+              <SidebarContent />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
