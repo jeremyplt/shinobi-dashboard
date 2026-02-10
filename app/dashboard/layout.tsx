@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { PageTransition } from "@/components/layout/page-transition";
 
 export default function DashboardLayout({
@@ -12,10 +13,11 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="md:pl-64">
         <Header />
-        <main className="p-4 md:p-6">
+        <main className="p-4 md:p-6 pb-20 md:pb-6">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
+      <MobileNav />
     </div>
   );
 }
