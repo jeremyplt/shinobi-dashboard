@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { RatingStats } from "@/components/reviews/rating-stats";
@@ -37,6 +37,8 @@ export default function ReviewsPage() {
   });
   const [platformFilter, setPlatformFilter] = useState("all");
   const [ratingFilter, setRatingFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
     async function fetchReviews() {
@@ -58,15 +60,40 @@ export default function ReviewsPage() {
     fetchReviews();
   }, []);
 
-  const filteredReviews = reviews.filter((review) => {
-    if (platformFilter !== "all" && review.platform !== platformFilter) {
-      return false;
+  const filteredAndSortedReviews = useMemo(() => {
+    let result = reviews.filter((review) => {
+      if (platformFilter !== "all" && review.platform !== platformFilter) return false;
+      if (ratingFilter !== "all" && review.rating !== Number(ratingFilter)) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return (
+          review.body.toLowerCase().includes(q) ||
+          review.title.toLowerCase().includes(q) ||
+          review.reviewerNickname.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+
+    // Sort
+    switch (sortBy) {
+      case "oldest":
+        result.sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
+        break;
+      case "rating-high":
+        result.sort((a, b) => b.rating - a.rating);
+        break;
+      case "rating-low":
+        result.sort((a, b) => a.rating - b.rating);
+        break;
+      case "newest":
+      default:
+        result.sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
+        break;
     }
-    if (ratingFilter !== "all" && review.rating !== Number(ratingFilter)) {
-      return false;
-    }
-    return true;
-  });
+
+    return result;
+  }, [reviews, platformFilter, ratingFilter, searchQuery, sortBy]);
 
   if (loading) {
     return (
@@ -90,7 +117,7 @@ export default function ReviewsPage() {
         <h1 className="text-2xl font-bold text-[#f1f5f9]">Reviews</h1>
         <div className="flex items-center gap-2 text-sm text-[#94a3b8]">
           <MessageSquare className="w-4 h-4" />
-          {filteredReviews.length} reviews
+          {filteredAndSortedReviews.length} of {reviews.length} reviews
         </div>
       </div>
 
@@ -113,6 +140,33 @@ export default function ReviewsPage() {
             total={stats.total}
             distribution={stats.ratingDistribution}
           />
+
+          {/* Quick stats */}
+          <Card className="bg-[#111118] border-[#1e1e2e]">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="text-sm font-medium text-[#f1f5f9]">Platform Breakdown</h3>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#94a3b8]">iOS</span>
+                <span className="font-medium text-blue-400">
+                  {reviews.filter(r => r.platform === "ios").length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#94a3b8]">Android</span>
+                <span className="font-medium text-green-400">
+                  {reviews.filter(r => r.platform === "android").length}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-[#1e1e2e]">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#94a3b8]">Negative (1-2⭐)</span>
+                  <span className="font-medium text-[#ef4444]">
+                    {reviews.filter(r => r.rating <= 2).length}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Reviews List */}
@@ -120,11 +174,15 @@ export default function ReviewsPage() {
           <ReviewFilters
             platform={platformFilter}
             rating={ratingFilter}
+            search={searchQuery}
+            sort={sortBy}
             onPlatformChange={setPlatformFilter}
             onRatingChange={setRatingFilter}
+            onSearchChange={setSearchQuery}
+            onSortChange={setSortBy}
           />
 
-          {filteredReviews.length === 0 ? (
+          {filteredAndSortedReviews.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -133,14 +191,16 @@ export default function ReviewsPage() {
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <MessageSquare className="w-12 h-12 text-[#94a3b8] mb-3" />
                   <p className="text-[#94a3b8] text-sm">
-                    No reviews match your filters
+                    {searchQuery
+                      ? `No reviews matching "${searchQuery}"`
+                      : "No reviews match your filters"}
                   </p>
                 </CardContent>
               </Card>
             </motion.div>
           ) : (
             <div className="space-y-3">
-              {filteredReviews.map((review, index) => (
+              {filteredAndSortedReviews.map((review, index) => (
                 <ReviewCard key={review.id} review={review} index={index} />
               ))}
             </div>
