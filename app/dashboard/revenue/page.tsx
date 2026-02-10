@@ -196,8 +196,12 @@ export default function RevenuePage() {
     churns: -d.churns,
   }));
 
-  // Calculate cumulative subscribers
+  // Calculate cumulative subscribers AND estimated MRR growth
   let cumulativeSubs = 0;
+  const arpu = overview && overview.subscribers > 0
+    ? overview.mrr / overview.subscribers
+    : 4.92; // fallback ARPU
+
   const subscriberGrowthData = revenueData.map((d) => {
     cumulativeSubs += d.newSubscriptions - d.churns;
     return {
@@ -208,6 +212,12 @@ export default function RevenuePage() {
       net: cumulativeSubs,
     };
   });
+
+  // MRR Evolution: estimated from subscriber growth × ARPU
+  const mrrGrowthData = subscriberGrowthData.map((d) => ({
+    date: d.date,
+    mrr: Math.round(d.net * arpu),
+  }));
 
   // Calculate total revenue
   const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0) / 100;
@@ -308,33 +318,59 @@ export default function RevenuePage() {
       <Card className="bg-[#111118] border-[#1e1e2e]">
         <CardHeader>
           <CardTitle className="text-[#f1f5f9] text-base flex items-center justify-between">
-            <span>Current MRR (from RevenueCat API)</span>
+            <span>MRR Evolution</span>
             <span className="text-sm text-[#94a3b8] font-normal">
               Goal: $30,000/mo
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {mrrEvolution.length > 0 ? (
+          {mrrGrowthData.length > 0 ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <p className="text-5xl font-bold text-[#22c55e] mb-2">
-                    {formatCurrency(mrrEvolution[0].mrr / 100)}
-                  </p>
-                  <p className="text-sm text-[#94a3b8]">
-                    {mrrEvolution[0].subscribers.toLocaleString()} active subscribers
-                  </p>
-                  <p className="text-xs text-[#94a3b8] mt-4 italic">
-                    📊 Historical MRR tracking coming soon
-                  </p>
-                </div>
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={mrrGrowthData}>
+                  <defs>
+                    <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#94a3b8"
+                    style={{ fontSize: "11px" }}
+                    interval={Math.max(0, Math.floor(mrrGrowthData.length / 10))}
+                  />
+                  <YAxis
+                    stroke="#94a3b8"
+                    style={{ fontSize: "11px" }}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#111118",
+                      border: "1px solid #1e1e2e",
+                      borderRadius: "8px",
+                      color: "#f1f5f9",
+                    }}
+                    formatter={(v: number | undefined) => [formatCurrency(v ?? 0), "MRR"]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="mrr"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorMrr)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
               <div className="w-full bg-[#1e1e2e] rounded-full h-3">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
-                    width: `${Math.min((mrrEvolution[0].mrr / 100 / 30000) * 100, 100)}%`,
+                    width: `${Math.min(((overview?.mrr || 0) / 30000) * 100, 100)}%`,
                   }}
                   transition={{ delay: 0.5, duration: 1 }}
                   className="bg-gradient-to-r from-[#6366f1] to-[#22c55e] h-3 rounded-full"
@@ -342,6 +378,9 @@ export default function RevenuePage() {
               </div>
               <div className="flex justify-between text-xs text-[#94a3b8]">
                 <span>$0</span>
+                <span className="text-[#22c55e] font-medium">
+                  Current: {formatCurrency(overview?.mrr || 0)}
+                </span>
                 <span className="text-[#f59e0b]">Goal: $30,000</span>
               </div>
             </div>
