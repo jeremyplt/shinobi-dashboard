@@ -76,52 +76,47 @@ export async function fetchCrashRates(
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - days);
 
-    try {
-      const result = await reporting.vitals.crashrate.query({
-        name: `apps/${PACKAGE_NAME}/crashRateMetricSet`,
-        requestBody: {
-          timelineSpec: {
-            aggregationPeriod: "DAILY",
-            startTime: {
-              year: startDate.getFullYear(),
-              month: startDate.getMonth() + 1,
-              day: startDate.getDate(),
-            },
-            endTime: {
-              year: endDate.getFullYear(),
-              month: endDate.getMonth() + 1,
-              day: endDate.getDate(),
-            },
+    const result = await reporting.vitals.crashrate.query({
+      name: `apps/${PACKAGE_NAME}/crashRateMetricSet`,
+      requestBody: {
+        timelineSpec: {
+          aggregationPeriod: "DAILY",
+          startTime: {
+            year: startDate.getFullYear(),
+            month: startDate.getMonth() + 1,
+            day: startDate.getDate(),
           },
-          dimensions: [],
-          metrics: [
-            "crashRate",
-            "userPerceivedCrashRate",
-            "distinctUsers",
-          ],
+          endTime: {
+            year: endDate.getFullYear(),
+            month: endDate.getMonth() + 1,
+            day: endDate.getDate(),
+          },
         },
-      });
+        dimensions: [],
+        metrics: [
+          "crashRate",
+          "userPerceivedCrashRate",
+          "distinctUsers",
+        ],
+      },
+    });
 
-      const rows = (result.data.rows as TimelineRow[]) || [];
+    const rows = (result.data.rows as TimelineRow[]) || [];
 
-      return rows.map((row) => {
-        const { year, month, day } = row.startTime;
-        const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        const vals = row.metrics.map(
-          (m) => parseFloat(m.decimalValue?.value || "0")
-        );
+    return rows.map((row) => {
+      const { year, month, day } = row.startTime;
+      const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const vals = row.metrics.map(
+        (m) => parseFloat(m.decimalValue?.value || "0")
+      );
 
-        return {
-          date,
-          crashRate: vals[0] || 0,
-          userPerceivedCrashRate: vals[1] || 0,
-          distinctUsers: vals[2] || 0,
-        };
-      });
-    } catch (error) {
-      console.error("Google Play crash rate fetch failed:", error);
-      return [];
-    }
+      return {
+        date,
+        crashRate: vals[0] || 0,
+        userPerceivedCrashRate: vals[1] || 0,
+        distinctUsers: vals[2] || 0,
+      };
+    });
   }, 60 * 60 * 1000); // 1 hour cache
 }
 
@@ -143,52 +138,47 @@ export async function fetchAnrRates(
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - days);
 
-    try {
-      const result = await reporting.vitals.anrrate.query({
-        name: `apps/${PACKAGE_NAME}/anrRateMetricSet`,
-        requestBody: {
-          timelineSpec: {
-            aggregationPeriod: "DAILY",
-            startTime: {
-              year: startDate.getFullYear(),
-              month: startDate.getMonth() + 1,
-              day: startDate.getDate(),
-            },
-            endTime: {
-              year: endDate.getFullYear(),
-              month: endDate.getMonth() + 1,
-              day: endDate.getDate(),
-            },
+    const result = await reporting.vitals.anrrate.query({
+      name: `apps/${PACKAGE_NAME}/anrRateMetricSet`,
+      requestBody: {
+        timelineSpec: {
+          aggregationPeriod: "DAILY",
+          startTime: {
+            year: startDate.getFullYear(),
+            month: startDate.getMonth() + 1,
+            day: startDate.getDate(),
           },
-          dimensions: [],
-          metrics: [
-            "anrRate",
-            "userPerceivedAnrRate",
-            "distinctUsers",
-          ],
+          endTime: {
+            year: endDate.getFullYear(),
+            month: endDate.getMonth() + 1,
+            day: endDate.getDate(),
+          },
         },
-      });
+        dimensions: [],
+        metrics: [
+          "anrRate",
+          "userPerceivedAnrRate",
+          "distinctUsers",
+        ],
+      },
+    });
 
-      const rows = (result.data.rows as TimelineRow[]) || [];
+    const rows = (result.data.rows as TimelineRow[]) || [];
 
-      return rows.map((row) => {
-        const { year, month, day } = row.startTime;
-        const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        const vals = row.metrics.map(
-          (m) => parseFloat(m.decimalValue?.value || "0")
-        );
+    return rows.map((row) => {
+      const { year, month, day } = row.startTime;
+      const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const vals = row.metrics.map(
+        (m) => parseFloat(m.decimalValue?.value || "0")
+      );
 
-        return {
-          date,
-          anrRate: vals[0] || 0,
-          userPerceivedAnrRate: vals[1] || 0,
-          distinctUsers: vals[2] || 0,
-        };
-      });
-    } catch (error) {
-      console.error("Google Play ANR rate fetch failed:", error);
-      return [];
-    }
+      return {
+        date,
+        anrRate: vals[0] || 0,
+        userPerceivedAnrRate: vals[1] || 0,
+        distinctUsers: vals[2] || 0,
+      };
+    });
   }, 60 * 60 * 1000);
 }
 
@@ -196,13 +186,18 @@ export async function fetchAnrRates(
  * Get the latest crash-free rate (percentage)
  */
 export async function getCrashFreeRate(): Promise<number> {
-  const crashRates = await fetchCrashRates(7);
-  if (crashRates.length === 0) return 0;
+  try {
+    const crashRates = await fetchCrashRates(7);
+    if (crashRates.length === 0) return 0;
 
-  // Average of last 7 days
-  const avgCrashRate =
-    crashRates.reduce((sum, r) => sum + r.userPerceivedCrashRate, 0) /
-    crashRates.length;
+    // Average of last 7 days
+    const avgCrashRate =
+      crashRates.reduce((sum, r) => sum + r.userPerceivedCrashRate, 0) /
+      crashRates.length;
 
-  return Math.round((1 - avgCrashRate) * 10000) / 100; // e.g., 99.87%
+    return Math.round((1 - avgCrashRate) * 10000) / 100; // e.g., 99.87%
+  } catch (error) {
+    console.error("getCrashFreeRate failed:", error);
+    return 0;
+  }
 }
