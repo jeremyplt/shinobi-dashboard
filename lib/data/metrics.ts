@@ -36,8 +36,9 @@ const SUBSCRIPTION_PRICES: Record<string, number> = {
 };
 
 /**
- * Calculate MRR evolution over time from subscription events
- * MRR = sum of monthly recurring revenue from active subscriptions
+ * Calculate MRR evolution over time from RevenueCat API
+ * NOTE: Historical MRR data requires daily snapshots (not yet implemented)
+ * For now, we show current MRR from RevenueCat API
  */
 export async function fetchMRREvolution(
   startDate?: string,
@@ -46,307 +47,56 @@ export async function fetchMRREvolution(
   const cacheKey = `metrics:mrr:${startDate || "all"}:${endDate || "now"}`;
 
   return cached(cacheKey, async () => {
-    const where = [];
-
-    if (startDate) {
-      where.push({
-        field: "event_timestamp_ms",
-        op: "GREATER_THAN_OR_EQUAL" as const,
-        value: { integerValue: String(new Date(startDate).getTime()) },
-      });
+    // Import RevenueCat API function dynamically to avoid circular dependency
+    const { fetchRevenueCatOverview } = await import("./revenuecat");
+    
+    try {
+      const overview = await fetchRevenueCatOverview();
+      
+      // Return current MRR as a single data point
+      // Historical data will be added once daily snapshot cron is implemented
+      const today = new Date().toISOString().split("T")[0];
+      
+      return [{
+        date: today,
+        mrr: overview.mrr,
+        subscribers: overview.activeSubscriptions,
+      }];
+    } catch (error) {
+      console.error("Failed to fetch MRR from RevenueCat API:", error);
+      return [];
     }
-    if (endDate) {
-      where.push({
-        field: "event_timestamp_ms",
-        op: "LESS_THAN_OR_EQUAL" as const,
-        value: {
-          integerValue: String(new Date(endDate + "T23:59:59Z").getTime()),
-        },
-      });
-    }
-
-    const docs = await runQuery({
-      collection: "revenuecat_events",
-      where: where.length > 0 ? where : undefined,
-      orderBy: [{ field: "event_timestamp_ms", direction: "ASCENDING" }],
-      select: [
-        "type",
-        "event_timestamp_ms",
-        "product_id",
-        "price_in_purchased_currency",
-        "currency",
-        "expiration_at_ms",
-        "app_user_id",
-      ],
-      limit: 50000,
-    });
-
-    // Track active subscriptions and calculate MRR day by day
-    interface Subscription {
-      userId: string;
-      productId: string;
-      startDate: string;
-      expirationMs: number;
-      monthlyValue: number; // USD cents
-    }
-
-    const activeSubscriptions = new Map<string, Subscription>();
-    const dailyMRR = new Map<string, { mrr: number; subscribers: number }>();
-
-    for (const doc of docs) {
-      const eventTs = doc.event_timestamp_ms as number;
-      const eventType = doc.type as string;
-      const userId = doc.app_user_id as string;
-      const productId = (doc.product_id as string) || "";
-      const expirationMs = (doc.expiration_at_ms as number) || 0;
-      const price = (doc.price_in_purchased_currency as number) || 0;
-      const currency = (doc.currency as string) || "USD";
-
-      const dateKey = new Date(eventTs).toISOString().split("T")[0];
-
-      // Determine monthly value
-      let monthlyValue = 0;
-      if (productId.includes("monthly")) {
-        monthlyValue = convertToUsdCents(price, currency);
-      } else if (productId.includes("yearly") || productId.includes("annual")) {
-        // Annual subscription: divide by 12 for MRR
-        monthlyValue = Math.round(convertToUsdCents(price, currency) / 12);
-      }
-
-      switch (eventType) {
-        case "INITIAL_PURCHASE":
-        case "RENEWAL":
-          // Add or update subscription
-          activeSubscriptions.set(userId, {
-            userId,
-            productId,
-            startDate: dateKey,
-            expirationMs,
-            monthlyValue,
-          });
-          break;
-        case "EXPIRATION":
-        case "CANCELLATION":
-          // Remove subscription
-          activeSubscriptions.delete(userId);
-          break;
-      }
-
-      // Calculate total MRR for this day
-      let totalMRR = 0;
-      let subscriberCount = 0;
-
-      for (const sub of activeSubscriptions.values()) {
-        // Only count if subscription is still active
-        if (sub.expirationMs > eventTs) {
-          totalMRR += sub.monthlyValue;
-          subscriberCount++;
-        }
-      }
-
-      dailyMRR.set(dateKey, { mrr: totalMRR, subscribers: subscriberCount });
-    }
-
-    const result: MRRDataPoint[] = Array.from(dailyMRR.entries())
-      .map(([date, data]) => ({
-        date,
-        mrr: data.mrr,
-        subscribers: data.subscribers,
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    if (result.length > 1) {
-      return fillMissingDays(result, startDate, endDate);
-    }
-
-    return result;
-  }, 60 * 60 * 1000);
+  }, 30 * 60 * 1000); // 30 min cache
 }
 
 /**
  * Calculate churn rate over time
- * Churn Rate = churned subscribers / active subscribers at start of period
+ * NOTE: Accurate churn calculation requires total active subscribers at each period
+ * Previous calculation was incorrect (showed 40-70% which is wrong)
+ * This feature is disabled until daily subscriber snapshots are implemented
  */
 export async function fetchChurnRate(
   startDate?: string,
   endDate?: string,
   period: "weekly" | "monthly" = "weekly"
 ): Promise<ChurnDataPoint[]> {
-  const cacheKey = `metrics:churn:${period}:${startDate || "all"}:${endDate || "now"}`;
-
-  return cached(cacheKey, async () => {
-    const where = [];
-
-    if (startDate) {
-      where.push({
-        field: "event_timestamp_ms",
-        op: "GREATER_THAN_OR_EQUAL" as const,
-        value: { integerValue: String(new Date(startDate).getTime()) },
-      });
-    }
-    if (endDate) {
-      where.push({
-        field: "event_timestamp_ms",
-        op: "LESS_THAN_OR_EQUAL" as const,
-        value: {
-          integerValue: String(new Date(endDate + "T23:59:59Z").getTime()),
-        },
-      });
-    }
-
-    const docs = await runQuery({
-      collection: "revenuecat_events",
-      where: where.length > 0 ? where : undefined,
-      orderBy: [{ field: "event_timestamp_ms", direction: "ASCENDING" }],
-      select: ["type", "event_timestamp_ms", "app_user_id"],
-      limit: 50000,
-    });
-
-    // Track subscribers by period
-    interface PeriodData {
-      date: string;
-      activeStart: Set<string>;
-      churned: Set<string>;
-    }
-
-    const periods = new Map<string, PeriodData>();
-
-    for (const doc of docs) {
-      const eventTs = doc.event_timestamp_ms as number;
-      const eventType = doc.type as string;
-      const userId = doc.app_user_id as string;
-
-      const date = new Date(eventTs);
-      const periodKey = getPeriodKey(date, period);
-
-      if (!periods.has(periodKey)) {
-        periods.set(periodKey, {
-          date: periodKey,
-          activeStart: new Set(),
-          churned: new Set(),
-        });
-      }
-
-      const periodData = periods.get(periodKey)!;
-
-      if (eventType === "INITIAL_PURCHASE" || eventType === "RENEWAL") {
-        periodData.activeStart.add(userId);
-      } else if (eventType === "EXPIRATION" || eventType === "CANCELLATION") {
-        periodData.churned.add(userId);
-      }
-    }
-
-    const result: ChurnDataPoint[] = Array.from(periods.values())
-      .map((p) => {
-        const activeStart = p.activeStart.size;
-        const churned = p.churned.size;
-        const churnRate = activeStart > 0 ? (churned / activeStart) * 100 : 0;
-
-        return {
-          date: p.date,
-          churnRate: Math.round(churnRate * 100) / 100,
-          churned,
-          activeStart,
-        };
-      })
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    return result;
-  }, 60 * 60 * 1000);
+  // Return empty array - chart will be hidden in the UI
+  // Accurate churn = churned in period / total active subscribers at start
+  // We don't have historical total active subscriber counts
+  return [];
 }
 
 /**
  * Calculate trial conversion rate over time
- * Conversion Rate = trials that converted to paid / total trials started
+ * NOTE: This app currently has no trial offering (only 1 active trial)
+ * This feature is disabled
  */
 export async function fetchConversionRate(
   startDate?: string,
   endDate?: string
 ): Promise<ConversionDataPoint[]> {
-  const cacheKey = `metrics:conversion:${startDate || "all"}:${endDate || "now"}`;
-
-  return cached(cacheKey, async () => {
-    const where = [];
-
-    if (startDate) {
-      where.push({
-        field: "event_timestamp_ms",
-        op: "GREATER_THAN_OR_EQUAL" as const,
-        value: { integerValue: String(new Date(startDate).getTime()) },
-      });
-    }
-    if (endDate) {
-      where.push({
-        field: "event_timestamp_ms",
-        op: "LESS_THAN_OR_EQUAL" as const,
-        value: {
-          integerValue: String(new Date(endDate + "T23:59:59Z").getTime()),
-        },
-      });
-    }
-
-    const docs = await runQuery({
-      collection: "revenuecat_events",
-      where: where.length > 0 ? where : undefined,
-      orderBy: [{ field: "event_timestamp_ms", direction: "ASCENDING" }],
-      select: ["type", "event_timestamp_ms", "app_user_id", "is_trial_period"],
-      limit: 50000,
-    });
-
-    // Track trials by month
-    interface MonthData {
-      date: string;
-      trialsStarted: Set<string>;
-      trialsConverted: Set<string>;
-    }
-
-    const months = new Map<string, MonthData>();
-
-    for (const doc of docs) {
-      const eventTs = doc.event_timestamp_ms as number;
-      const eventType = doc.type as string;
-      const userId = doc.app_user_id as string;
-      const isTrial = doc.is_trial_period as boolean;
-
-      const date = new Date(eventTs);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-
-      if (!months.has(monthKey)) {
-        months.set(monthKey, {
-          date: monthKey,
-          trialsStarted: new Set(),
-          trialsConverted: new Set(),
-        });
-      }
-
-      const monthData = months.get(monthKey)!;
-
-      if (eventType === "INITIAL_PURCHASE" && isTrial) {
-        monthData.trialsStarted.add(userId);
-      } else if (eventType === "RENEWAL" && !isTrial) {
-        // User converted from trial to paid (first renewal after trial)
-        monthData.trialsConverted.add(userId);
-      }
-    }
-
-    const result: ConversionDataPoint[] = Array.from(months.values())
-      .map((m) => {
-        const trialsStarted = m.trialsStarted.size;
-        const trialsConverted = m.trialsConverted.size;
-        const conversionRate =
-          trialsStarted > 0 ? (trialsConverted / trialsStarted) * 100 : 0;
-
-        return {
-          date: m.date,
-          conversionRate: Math.round(conversionRate * 100) / 100,
-          trialsStarted,
-          trialsConverted,
-        };
-      })
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    return result;
-  }, 60 * 60 * 1000);
+  // Return empty array - app doesn't use trials
+  return [];
 }
 
 // --- Helper Functions ---

@@ -29,7 +29,9 @@ export interface LTVEstimate {
 }
 
 /**
- * Calculate ARPU (Average Revenue Per User) by month
+ * Calculate ARPU (Average Revenue Per User)
+ * Uses RevenueCat API for current accurate ARPU
+ * Historical ARPU requires daily snapshots (not yet implemented)
  */
 export async function fetchARPU(
   startDate?: string,
@@ -38,92 +40,27 @@ export async function fetchARPU(
   const cacheKey = `analytics:arpu:${startDate || "all"}:${endDate || "now"}`;
 
   return cached(cacheKey, async () => {
-    const where = [];
-
-    if (startDate) {
-      where.push({
-        field: "event_timestamp_ms",
-        op: "GREATER_THAN_OR_EQUAL" as const,
-        value: { integerValue: String(new Date(startDate).getTime()) },
-      });
-    }
-    if (endDate) {
-      where.push({
-        field: "event_timestamp_ms",
-        op: "LESS_THAN_OR_EQUAL" as const,
-        value: {
-          integerValue: String(new Date(endDate + "T23:59:59Z").getTime()),
-        },
-      });
-    }
-
-    const docs = await runQuery({
-      collection: "revenuecat_events",
-      where: where.length > 0 ? where : undefined,
-      orderBy: [{ field: "event_timestamp_ms", direction: "ASCENDING" }],
-      select: [
-        "event_timestamp_ms",
-        "type",
-        "app_user_id",
-        "price_in_purchased_currency",
-        "currency",
-      ],
-      limit: 50000,
-    });
-
-    // Aggregate by month
-    interface MonthData {
-      date: string;
-      revenue: number;
-      users: Set<string>;
-    }
-
-    const months = new Map<string, MonthData>();
-
-    for (const doc of docs) {
-      const eventTs = doc.event_timestamp_ms as number;
-      const eventType = doc.type as string;
-      const userId = doc.app_user_id as string;
-      const price = (doc.price_in_purchased_currency as number) || 0;
-      const currency = (doc.currency as string) || "USD";
-
-      // Only count revenue events
-      if (!["INITIAL_PURCHASE", "RENEWAL", "NON_RENEWING_PURCHASE"].includes(eventType)) {
-        continue;
-      }
-
-      const date = new Date(eventTs);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-
-      if (!months.has(monthKey)) {
-        months.set(monthKey, {
-          date: monthKey,
-          revenue: 0,
-          users: new Set(),
-        });
-      }
-
-      const monthData = months.get(monthKey)!;
-      monthData.revenue += convertToUsdCents(price, currency);
-      monthData.users.add(userId);
-    }
-
-    const result: ARPUDataPoint[] = Array.from(months.values())
-      .map((m) => {
-        const activeUsers = m.users.size;
-        const arpu = activeUsers > 0 ? Math.round(m.revenue / activeUsers) : 0;
-
-        return {
-          date: m.date,
-          arpu,
-          totalRevenue: m.revenue,
-          activeUsers,
-        };
-      })
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    return result;
-  }, 60 * 60 * 1000);
+    // Get accurate current metrics from RevenueCat API
+    const { fetchRevenueCatOverview } = await import("./revenuecat");
+    const overview = await fetchRevenueCatOverview();
+    
+    // Calculate current ARPU: MRR / active subscribers
+    const currentArpu = overview.activeSubscriptions > 0 
+      ? Math.round(overview.mrr / overview.activeSubscriptions)
+      : 0;
+    
+    // Return current ARPU as a single data point
+    // Historical ARPU will be added once daily snapshots are implemented
+    const today = new Date();
+    const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    
+    return [{
+      date: monthKey,
+      arpu: currentArpu,
+      totalRevenue: overview.mrr,
+      activeUsers: overview.activeSubscriptions,
+    }];
+  }, 30 * 60 * 1000); // 30 min cache
 }
 
 /**
@@ -209,29 +146,36 @@ export async function fetchRevenueByCountry(
 
 /**
  * Estimate LTV based on subscription duration and revenue
+ * Uses RevenueCat API for accurate ARPU calculation
  */
 export async function estimateLTV(): Promise<LTVEstimate> {
   return cached("analytics:ltv", async () => {
-    // Fetch all subscription events to calculate average duration
+    // Get accurate current metrics from RevenueCat API
+    const { fetchRevenueCatOverview } = await import("./revenuecat");
+    const overview = await fetchRevenueCatOverview();
+    
+    // Calculate ARPU: MRR / active subscribers
+    const arpu = overview.activeSubscriptions > 0 
+      ? Math.round(overview.mrr / overview.activeSubscriptions)
+      : 0;
+    
+    // Fetch subscription events to calculate average duration
     const docs = await runQuery({
       collection: "revenuecat_events",
       select: [
         "type",
         "event_timestamp_ms",
         "app_user_id",
-        "price_in_purchased_currency",
-        "currency",
         "expiration_at_ms",
       ],
       limit: 50000,
     });
 
-    // Track user subscriptions
+    // Track user subscription durations
     interface UserSubscription {
       userId: string;
       startDate: number;
       endDate: number;
-      totalRevenue: number;
     }
 
     const userSubs = new Map<string, UserSubscription>();
@@ -240,8 +184,6 @@ export async function estimateLTV(): Promise<LTVEstimate> {
       const eventTs = doc.event_timestamp_ms as number;
       const eventType = doc.type as string;
       const userId = doc.app_user_id as string;
-      const price = (doc.price_in_purchased_currency as number) || 0;
-      const currency = (doc.currency as string) || "USD";
       const expirationMs = (doc.expiration_at_ms as number) || eventTs;
 
       if (eventType === "INITIAL_PURCHASE") {
@@ -249,40 +191,33 @@ export async function estimateLTV(): Promise<LTVEstimate> {
           userId,
           startDate: eventTs,
           endDate: expirationMs,
-          totalRevenue: convertToUsdCents(price, currency),
         });
       } else if (eventType === "RENEWAL") {
         const sub = userSubs.get(userId);
         if (sub) {
           sub.endDate = Math.max(sub.endDate, expirationMs);
-          sub.totalRevenue += convertToUsdCents(price, currency);
         }
       }
     }
 
-    // Calculate averages
+    // Calculate average duration
     const subscriptions = Array.from(userSubs.values());
     const totalDuration = subscriptions.reduce(
       (sum, s) => sum + (s.endDate - s.startDate),
       0
     );
-    const totalRevenue = subscriptions.reduce((sum, s) => sum + s.totalRevenue, 0);
 
     const avgDurationMs =
       subscriptions.length > 0 ? totalDuration / subscriptions.length : 0;
     const avgDurationDays = Math.round(avgDurationMs / (1000 * 60 * 60 * 24));
-    const avgTotalRevenue =
-      subscriptions.length > 0 ? totalRevenue / subscriptions.length : 0;
-    const avgMonthlyRevenue =
-      avgDurationDays > 0 ? Math.round((avgTotalRevenue / avgDurationDays) * 30) : 0;
 
-    // LTV = avg monthly revenue * avg duration in months
+    // LTV = ARPU * avg duration in months
     const avgDurationMonths = avgDurationDays / 30;
-    const estimatedLTV = Math.round(avgMonthlyRevenue * avgDurationMonths);
+    const estimatedLTV = Math.round(arpu * avgDurationMonths);
 
     return {
       avgSubscriptionDuration: avgDurationDays,
-      avgMonthlyRevenue,
+      avgMonthlyRevenue: arpu, // This is actually ARPU from RevenueCat
       estimatedLTV,
     };
   }, 2 * 60 * 60 * 1000); // 2 hour cache

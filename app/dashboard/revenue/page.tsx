@@ -308,181 +308,164 @@ export default function RevenuePage() {
       <Card className="bg-[#111118] border-[#1e1e2e]">
         <CardHeader>
           <CardTitle className="text-[#f1f5f9] text-base flex items-center justify-between">
-            <span>MRR Evolution</span>
+            <span>Current MRR (from RevenueCat API)</span>
             <span className="text-sm text-[#94a3b8] font-normal">
               Goal: $30,000/mo
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
-            <AreaChart data={mrrEvolution.map((d) => ({
-              date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              }),
-              mrr: d.mrr / 100,
-              goal: 30000,
-            }))}>
-              <defs>
-                <linearGradient id="colorMRR" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
-              <XAxis
-                dataKey="date"
-                stroke="#94a3b8"
-                style={{ fontSize: "11px" }}
-                interval={Math.max(0, Math.floor(mrrEvolution.length / 10))}
-              />
-              <YAxis
-                stroke="#94a3b8"
-                style={{ fontSize: "11px" }}
-                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#111118",
-                  border: "1px solid #1e1e2e",
-                  borderRadius: "8px",
-                  color: "#f1f5f9",
-                }}
-                formatter={(v: number | undefined) => [formatCurrency(v ?? 0), "MRR"]}
-              />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="mrr"
-                name="MRR"
-                stroke="#22c55e"
-                strokeWidth={2}
-                fill="url(#colorMRR)"
-              />
-              <Line
-                type="monotone"
-                dataKey="goal"
-                name="Goal"
-                stroke="#f59e0b"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {mrrEvolution.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <p className="text-5xl font-bold text-[#22c55e] mb-2">
+                    {formatCurrency(mrrEvolution[0].mrr / 100)}
+                  </p>
+                  <p className="text-sm text-[#94a3b8]">
+                    {mrrEvolution[0].subscribers.toLocaleString()} active subscribers
+                  </p>
+                  <p className="text-xs text-[#94a3b8] mt-4 italic">
+                    📊 Historical MRR tracking coming soon
+                  </p>
+                </div>
+              </div>
+              <div className="w-full bg-[#1e1e2e] rounded-full h-3">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${Math.min((mrrEvolution[0].mrr / 100 / 30000) * 100, 100)}%`,
+                  }}
+                  transition={{ delay: 0.5, duration: 1 }}
+                  className="bg-gradient-to-r from-[#6366f1] to-[#22c55e] h-3 rounded-full"
+                />
+              </div>
+              <div className="flex justify-between text-xs text-[#94a3b8]">
+                <span>$0</span>
+                <span className="text-[#f59e0b]">Goal: $30,000</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-[#94a3b8]">
+              No MRR data available
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Charts */}
+      {/* Charts - Only show if data exists */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Churn Rate */}
-        <Card className="bg-[#111118] border-[#1e1e2e]">
-          <CardHeader>
-            <CardTitle className="text-[#f1f5f9] text-base">
-              Weekly Churn Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={churnData.map((d) => ({
-                date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                }),
-                churnRate: d.churnRate,
-                churned: d.churned,
-              }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#94a3b8"
-                  style={{ fontSize: "11px" }}
-                  interval={Math.max(0, Math.floor(churnData.length / 8))}
-                />
-                <YAxis
-                  stroke="#94a3b8"
-                  style={{ fontSize: "11px" }}
-                  tickFormatter={(v) => `${v}%`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#111118",
-                    border: "1px solid #1e1e2e",
-                    borderRadius: "8px",
-                    color: "#f1f5f9",
-                  }}
-                  formatter={(v: number | undefined, name: string | undefined) => {
-                    if (name === "Churn Rate") return [`${(v ?? 0).toFixed(2)}%`, name ?? ""];
-                    return [v ?? 0, name ?? ""];
-                  }}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="churnRate"
-                  name="Churn Rate"
-                  stroke="#ef4444"
-                  strokeWidth={2}
-                  dot={{ fill: "#ef4444", r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Churn Rate - Hidden: Requires daily snapshot data */}
+        {churnData.length > 0 && (
+          <Card className="bg-[#111118] border-[#1e1e2e]">
+            <CardHeader>
+              <CardTitle className="text-[#f1f5f9] text-base">
+                Weekly Churn Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={churnData.map((d) => ({
+                  date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  }),
+                  churnRate: d.churnRate,
+                  churned: d.churned,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#94a3b8"
+                    style={{ fontSize: "11px" }}
+                    interval={Math.max(0, Math.floor(churnData.length / 8))}
+                  />
+                  <YAxis
+                    stroke="#94a3b8"
+                    style={{ fontSize: "11px" }}
+                    tickFormatter={(v) => `${v}%`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#111118",
+                      border: "1px solid #1e1e2e",
+                      borderRadius: "8px",
+                      color: "#f1f5f9",
+                    }}
+                    formatter={(v: number | undefined, name: string | undefined) => {
+                      if (name === "Churn Rate") return [`${(v ?? 0).toFixed(2)}%`, name ?? ""];
+                      return [v ?? 0, name ?? ""];
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="churnRate"
+                    name="Churn Rate"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    dot={{ fill: "#ef4444", r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Conversion Rate */}
-        <Card className="bg-[#111118] border-[#1e1e2e]">
-          <CardHeader>
-            <CardTitle className="text-[#f1f5f9] text-base">
-              Trial → Paid Conversion Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={conversionData.map((d) => ({
-                date: d.date,
-                conversionRate: d.conversionRate,
-                trialsStarted: d.trialsStarted,
-                trialsConverted: d.trialsConverted,
-              }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#94a3b8"
-                  style={{ fontSize: "11px" }}
-                  interval={Math.max(0, Math.floor(conversionData.length / 6))}
-                />
-                <YAxis
-                  stroke="#94a3b8"
-                  style={{ fontSize: "11px" }}
-                  tickFormatter={(v) => `${v}%`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#111118",
-                    border: "1px solid #1e1e2e",
-                    borderRadius: "8px",
-                    color: "#f1f5f9",
-                  }}
-                  formatter={(v: number | undefined, name: string | undefined) => {
-                    if (name === "Conversion Rate") return [`${(v ?? 0).toFixed(2)}%`, name ?? ""];
-                    return [v ?? 0, name ?? ""];
-                  }}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="conversionRate"
-                  name="Conversion Rate"
-                  stroke="#6366f1"
-                  strokeWidth={2}
-                  dot={{ fill: "#6366f1", r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Conversion Rate - Hidden: App doesn't use trials */}
+        {conversionData.length > 0 && (
+          <Card className="bg-[#111118] border-[#1e1e2e]">
+            <CardHeader>
+              <CardTitle className="text-[#f1f5f9] text-base">
+                Trial → Paid Conversion Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={conversionData.map((d) => ({
+                  date: d.date,
+                  conversionRate: d.conversionRate,
+                  trialsStarted: d.trialsStarted,
+                  trialsConverted: d.trialsConverted,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#94a3b8"
+                    style={{ fontSize: "11px" }}
+                    interval={Math.max(0, Math.floor(conversionData.length / 6))}
+                  />
+                  <YAxis
+                    stroke="#94a3b8"
+                    style={{ fontSize: "11px" }}
+                    tickFormatter={(v) => `${v}%`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#111118",
+                      border: "1px solid #1e1e2e",
+                      borderRadius: "8px",
+                      color: "#f1f5f9",
+                    }}
+                    formatter={(v: number | undefined, name: string | undefined) => {
+                      if (name === "Conversion Rate") return [`${(v ?? 0).toFixed(2)}%`, name ?? ""];
+                      return [v ?? 0, name ?? ""];
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="conversionRate"
+                    name="Conversion Rate"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    dot={{ fill: "#6366f1", r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Daily Revenue */}
         <Card className="bg-[#111118] border-[#1e1e2e]">
@@ -652,41 +635,27 @@ export default function RevenuePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={arpuData.map((d) => ({
-                date: d.date,
-                arpu: d.arpu / 100,
-              }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#94a3b8"
-                  style={{ fontSize: "11px" }}
-                  interval={Math.max(0, Math.floor(arpuData.length / 6))}
-                />
-                <YAxis
-                  stroke="#94a3b8"
-                  style={{ fontSize: "11px" }}
-                  tickFormatter={(v) => `$${v.toFixed(0)}`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#111118",
-                    border: "1px solid #1e1e2e",
-                    borderRadius: "8px",
-                    color: "#f1f5f9",
-                  }}
-                  formatter={(v: number | undefined) => [formatCurrency(v ?? 0), "ARPU"]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="arpu"
-                  stroke="#6366f1"
-                  strokeWidth={2}
-                  dot={{ fill: "#6366f1", r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {arpuData.length > 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <p className="text-5xl font-bold text-[#6366f1] mb-2">
+                    {formatCurrency(arpuData[0].arpu / 100)}
+                  </p>
+                  <p className="text-sm text-[#94a3b8]">per month per subscriber</p>
+                  <p className="text-xs text-[#94a3b8] mt-2">
+                    {formatCurrency(arpuData[0].totalRevenue / 100)} MRR ÷{" "}
+                    {arpuData[0].activeUsers.toLocaleString()} subscribers
+                  </p>
+                  <p className="text-xs text-[#94a3b8] mt-4 italic">
+                    📊 Historical ARPU tracking coming soon
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-[#94a3b8]">
+                No ARPU data available
+              </div>
+            )}
           </CardContent>
         </Card>
 
