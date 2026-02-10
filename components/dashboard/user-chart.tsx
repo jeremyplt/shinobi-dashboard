@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Line,
@@ -11,35 +12,80 @@ import {
   YAxis,
 } from "recharts";
 import { formatNumber } from "@/lib/utils";
+import { Users } from "lucide-react";
+
+interface HistoricalMetric {
+  date: string;
+  active_subscribers: number | null;
+}
 
 interface ChartDataPoint {
-  month: string;
+  date: string;
   value: number;
 }
 
-interface UserGrowthChartProps {
-  data: ChartDataPoint[];
-}
+export function UserGrowthChart() {
+  const [data, setData] = useState<ChartDataPoint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export function UserGrowthChart({ data }: UserGrowthChartProps) {
-  const isEmpty = !data || data.length === 0;
+  useEffect(() => {
+    async function fetchHistorical() {
+      try {
+        const res = await fetch("/api/historical?days=30");
+        if (!res.ok) throw new Error("Failed to fetch historical data");
+        const json = await res.json();
+        const points: ChartDataPoint[] = (json.metrics as HistoricalMetric[])
+          .filter((m) => m.active_subscribers != null)
+          .map((m) => ({
+            date: new Date(m.date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+            value: m.active_subscribers ?? 0,
+          }));
+        setData(points);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchHistorical();
+  }, []);
 
   return (
     <Card className="bg-[#111118] border-[#1e1e2e]">
       <CardHeader>
-        <CardTitle className="text-[#f1f5f9]">User Growth</CardTitle>
+        <CardTitle className="text-[#f1f5f9]">Subscriber Growth</CardTitle>
       </CardHeader>
       <CardContent>
-        {isEmpty ? (
+        {loading ? (
           <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
-            <p className="text-sm">No user data available</p>
+            <div className="animate-pulse text-sm">Loading chart data…</div>
+          </div>
+        ) : error ? (
+          <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        ) : data.length <= 1 ? (
+          <div className="h-[300px] flex flex-col items-center justify-center text-[#94a3b8] gap-2">
+            <Users className="w-8 h-8 text-[#22c55e] opacity-50" />
+            <p className="text-sm">
+              Tracking started — data will accumulate daily
+            </p>
+            {data.length === 1 && (
+              <p className="text-xs text-[#22c55e]">
+                Current subscribers: {formatNumber(data[0].value)}
+              </p>
+            )}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
               <XAxis
-                dataKey="month"
+                dataKey="date"
                 stroke="#94a3b8"
                 style={{ fontSize: "12px" }}
               />
@@ -57,7 +103,7 @@ export function UserGrowthChart({ data }: UserGrowthChartProps) {
                 }}
                 formatter={(value: number | undefined) => [
                   formatNumber(value ?? 0),
-                  "Users",
+                  "Subscribers",
                 ]}
               />
               <Line
