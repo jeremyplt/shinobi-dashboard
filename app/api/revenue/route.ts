@@ -25,24 +25,35 @@ export async function GET() {
 
     const data = await response.json();
 
+    // RevenueCat returns metrics as an array: data.metrics[{id, value}]
+    let mrr = 0, activeSubscriptions = 0, revenue = 0, activeUsers = 0;
+    if (data.metrics) {
+      for (const m of data.metrics) {
+        if (m.id === "mrr") mrr = Math.round(m.value || 0);
+        if (m.id === "active_subscriptions") activeSubscriptions = Math.round(m.value || 0);
+        if (m.id === "revenue") revenue = Math.round(m.value || 0);
+        if (m.id === "active_users") activeUsers = Math.round(m.value || 0);
+      }
+    }
+
     return NextResponse.json({
-      mrr: data.mrr || 0,
-      activeSubscriptions: data.active_subscriptions || 0,
-      revenue: data.revenue || 0,
-      activeUsers: data.active_users || 0,
-      churn: data.churn_rate || 0,
+      mrr,
+      activeSubscriptions,
+      revenue,
+      activeUsers,
+      churn: 0,
     });
   } catch (error) {
     console.error("RevenueCat API error:", error);
     
-    // Return mock data on error
+    // Return error response (no mock data)
     return NextResponse.json({
-      mrr: 12450,
-      activeSubscriptions: 523,
-      revenue: 38900,
-      activeUsers: 2847,
-      churn: 3.2,
-      error: "Using cached data",
-    });
+      mrr: 0,
+      activeSubscriptions: 0,
+      revenue: 0,
+      activeUsers: 0,
+      churn: 0,
+      error: "API connection failed",
+    }, { status: 500 });
   }
 }

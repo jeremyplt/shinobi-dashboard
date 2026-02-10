@@ -39,9 +39,9 @@ async function fetchSentryIssues() {
 
 export async function GET() {
   let hasErrors = false;
-  let mrr = 12450;
-  let subscribers = 523;
-  let activeUsers = 2847;
+  let mrr = 0;
+  let subscribers = 0;
+  let activeUsers = 0;
   let issues: Array<{ id: string; title: string; count: string; userCount: number; lastSeen: string; level: string; culprit: string }> = [];
 
   // Fetch RevenueCat
