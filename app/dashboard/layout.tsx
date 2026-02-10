@@ -2,6 +2,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { PageTransition } from "@/components/layout/page-transition";
+import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 
 export default function DashboardLayout({
   children,
@@ -18,6 +19,7 @@ export default function DashboardLayout({
         </main>
       </div>
       <MobileNav />
+      <KeyboardShortcuts />
     </div>
   );
 }
