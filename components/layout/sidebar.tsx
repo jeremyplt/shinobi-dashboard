@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Headphones,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,8 @@ const navigation = [
   { name: "Reviews", href: "/dashboard/reviews", icon: MessageSquare, shortcut: "3" },
   { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign, shortcut: "4" },
   { name: "Errors", href: "/dashboard/errors", icon: AlertCircle, shortcut: "5" },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings, shortcut: "6" },
+  { name: "Support", href: "/dashboard/support", icon: Headphones, shortcut: "6" },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings, shortcut: "7" },
 ];
 
 export function Sidebar() {

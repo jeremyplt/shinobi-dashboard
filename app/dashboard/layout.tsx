@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { PageTransition } from "@/components/layout/page-transition";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
+import { DateRangeProvider } from "@/lib/date-range-context";
 
 export default function DashboardLayout({
   children,
@@ -10,16 +11,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      <Sidebar />
-      <div className="md:pl-64">
-        <Header />
-        <main className="p-4 md:p-6 pb-20 md:pb-6">
-          <PageTransition>{children}</PageTransition>
-        </main>
+    <DateRangeProvider>
+      <div className="min-h-screen bg-[#0a0a0f]">
+        <Sidebar />
+        <div className="md:pl-64">
+          <Header />
+          <main className="p-4 md:p-6 pb-20 md:pb-6">
+            <PageTransition>{children}</PageTransition>
+          </main>
+        </div>
+        <MobileNav />
+        <KeyboardShortcuts />
       </div>
-      <MobileNav />
-      <KeyboardShortcuts />
-    </div>
+    </DateRangeProvider>
   );
 }

@@ -9,7 +9,8 @@ const shortcuts: Record<string, string> = {
   "3": "/dashboard/reviews",
   "4": "/dashboard/revenue",
   "5": "/dashboard/errors",
-  "6": "/dashboard/settings",
+  "6": "/dashboard/support",
+  "7": "/dashboard/settings",
 };
 
 export function KeyboardShortcuts() {

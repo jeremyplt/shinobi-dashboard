@@ -8,6 +8,7 @@ import {
   MessageSquare,
   DollarSign,
   AlertCircle,
+  Headphones,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ const navigation = [
   { name: "Reviews", href: "/dashboard/reviews", icon: MessageSquare },
   { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign },
   { name: "Errors", href: "/dashboard/errors", icon: AlertCircle },
+  { name: "Support", href: "/dashboard/support", icon: Headphones },
 ];
 
 export function MobileNav() {
@@ -34,7 +36,7 @@ export function MobileNav() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors min-w-[56px]",
+                "flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px]",
                 isActive
                   ? "text-[#6366f1]"
                   : "text-[#64748b] active:text-[#94a3b8]"
