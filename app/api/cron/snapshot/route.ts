@@ -13,7 +13,8 @@ import { fetchSentryIssues } from "@/lib/data/sentry";
 
 export const dynamic = "force-dynamic";
 
-async function ensureTable(sql: ReturnType<typeof neon>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function ensureTable(sql: any) {
   await sql`
     CREATE TABLE IF NOT EXISTS daily_snapshots (
       id SERIAL PRIMARY KEY,
