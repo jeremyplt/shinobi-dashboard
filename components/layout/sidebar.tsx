@@ -10,6 +10,7 @@ import {
   DollarSign,
   AlertCircle,
   BarChart3,
+  Settings,
   ChevronLeft,
   ChevronRight,
   X,
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Reviews", href: "/dashboard/reviews", icon: MessageSquare },
   { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign },
   { name: "Errors", href: "/dashboard/errors", icon: AlertCircle },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function Sidebar() {
