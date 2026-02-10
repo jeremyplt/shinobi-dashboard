@@ -3,53 +3,51 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Area,
-  AreaChart,
+  Line,
+  LineChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { formatNumber } from "@/lib/utils";
-import { Users } from "lucide-react";
+import { Shield } from "lucide-react";
 
-interface DailyUsers {
+interface DailyCrashRate {
   date: string;
-  newUsers: number;
-  cumulativeUsers: number;
+  crashRate: number;
+  userPerceivedCrashRate: number;
 }
 
 interface ChartDataPoint {
   date: string;
   label: string;
-  cumulative: number;
-  newUsers: number;
+  crashFreeRate: number;
 }
 
-export function UserGrowthChart() {
+export function CrashRateChart() {
   const [data, setData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchUsers() {
+    async function fetchCrashes() {
       try {
-        const res = await fetch("/api/charts/users");
-        if (!res.ok) throw new Error("Failed to fetch user data");
+        const res = await fetch("/api/charts/crashes?days=90");
+        if (!res.ok) throw new Error("Failed to fetch crash data");
         const json = await res.json();
 
-        const points: ChartDataPoint[] = (json.data as DailyUsers[]).map(
-          (d) => ({
-            date: d.date,
-            label: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            }),
-            cumulative: d.cumulativeUsers,
-            newUsers: d.newUsers,
-          })
-        );
+        const points: ChartDataPoint[] = (
+          json.crashRates as DailyCrashRate[]
+        ).map((d) => ({
+          date: d.date,
+          label: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+          crashFreeRate:
+            Math.round((1 - d.userPerceivedCrashRate) * 10000) / 100,
+        }));
 
         setData(points);
       } catch (e) {
@@ -58,24 +56,24 @@ export function UserGrowthChart() {
         setLoading(false);
       }
     }
-    fetchUsers();
+    fetchCrashes();
   }, []);
 
   return (
     <Card className="bg-[#111118] border-[#1e1e2e]">
       <CardHeader>
         <CardTitle className="text-[#f1f5f9] flex items-center gap-2">
-          <Users className="w-5 h-5 text-[#6366f1]" />
-          User Growth
+          <Shield className="w-5 h-5 text-[#f59e0b]" />
+          Crash-Free Rate (Android)
         </CardTitle>
         <p className="text-xs text-[#94a3b8]">
-          Cumulative registered users over time
+          User-perceived crash-free rate from Google Play
         </p>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
-            <div className="animate-pulse text-sm">Loading user data…</div>
+            <div className="animate-pulse text-sm">Loading crash data…</div>
           </div>
         ) : error ? (
           <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
@@ -83,17 +81,11 @@ export function UserGrowthChart() {
           </div>
         ) : data.length === 0 ? (
           <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
-            <p className="text-sm">No user data available</p>
+            <p className="text-sm">No crash data available</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
               <XAxis
                 dataKey="label"
@@ -104,7 +96,8 @@ export function UserGrowthChart() {
               <YAxis
                 stroke="#94a3b8"
                 style={{ fontSize: "11px" }}
-                tickFormatter={(value) => formatNumber(value)}
+                domain={["dataMin - 0.5", 100]}
+                tickFormatter={(value) => `${value}%`}
               />
               <Tooltip
                 contentStyle={{
@@ -114,19 +107,19 @@ export function UserGrowthChart() {
                   color: "#f1f5f9",
                 }}
                 formatter={(value: number | undefined) => [
-                  formatNumber(value ?? 0),
-                  "Total Users",
+                  `${(value ?? 0).toFixed(2)}%`,
+                  "Crash-Free Rate",
                 ]}
               />
-              <Area
+              <Line
                 type="monotone"
-                dataKey="cumulative"
-                stroke="#6366f1"
+                dataKey="crashFreeRate"
+                stroke="#22c55e"
                 strokeWidth={2}
-                fill="url(#colorUsers)"
-                name="cumulative"
+                dot={false}
+                name="Crash-Free Rate"
               />
-            </AreaChart>
+            </LineChart>
           </ResponsiveContainer>
         )}
       </CardContent>

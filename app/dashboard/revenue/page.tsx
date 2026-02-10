@@ -2,75 +2,86 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MRRChart } from "@/components/revenue/mrr-chart";
-import { SubscriberChart } from "@/components/revenue/subscriber-chart";
-import { PlanBreakdown } from "@/components/revenue/plan-breakdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, DollarSign, TrendingUp, Users, RefreshCw } from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  AlertCircle,
+  DollarSign,
+  TrendingUp,
+  Users,
+  RefreshCw,
+  Zap,
+} from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 
-interface RevenueData {
-  mrr: number;
-  activeSubscriptions: number;
+interface DailyRevenue {
+  date: string;
   revenue: number;
-  activeUsers: number;
-  churn: number;
+  newSubscriptions: number;
+  renewals: number;
+  cancellations: number;
+  churns: number;
+}
+
+interface OverviewData {
+  mrr: number;
+  subscribers: number;
+  revenue28d: number;
+  activeTrials: number;
 }
 
 export default function RevenuePage() {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [data, setData] = useState<RevenueData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [revenueData, setRevenueData] = useState<DailyRevenue[]>([]);
+  const [overview, setOverview] = useState<OverviewData | null>(null);
 
   useEffect(() => {
-    async function fetchRevenue() {
+    async function fetchData() {
       try {
-        const response = await fetch("/api/revenue");
-        const result = await response.json();
-        setData(result);
-        setError(!!result.error);
-      } catch (err) {
-        console.error("Failed to fetch revenue:", err);
-        setError(true);
-        // Use mock data
-        setData({
-          mrr: 12450,
-          activeSubscriptions: 523,
-          revenue: 38900,
-          activeUsers: 2847,
-          churn: 3.2,
+        const [revenueRes, statsRes] = await Promise.all([
+          fetch("/api/charts/revenue"),
+          fetch("/api/stats"),
+        ]);
+
+        if (!revenueRes.ok) throw new Error("Failed to fetch revenue data");
+        if (!statsRes.ok) throw new Error("Failed to fetch stats");
+
+        const revenueJson = await revenueRes.json();
+        const statsJson = await statsRes.json();
+
+        setRevenueData(revenueJson.data || []);
+        setOverview({
+          mrr: statsJson.mrr || 0,
+          subscribers: statsJson.subscribers || 0,
+          revenue28d: statsJson.revenue28d || 0,
+          activeTrials: statsJson.activeTrials || 0,
         });
+
+        if (revenueJson.error) setError(revenueJson.error);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }
     }
 
-    fetchRevenue();
+    fetchData();
   }, []);
-
-  // Generate chart data (in a real app this would come from the API)
-  const mrrData = Array.from({ length: 12 }, (_, i) => {
-    const month = new Date(2025, i + 3, 1);
-    return {
-      date: month.toLocaleDateString("en-US", { month: "short" }),
-      mrr: Math.round(8000 + i * 400 + Math.random() * 300),
-    };
-  });
-
-  const subscriberData = Array.from({ length: 12 }, (_, i) => {
-    const month = new Date(2025, i + 3, 1);
-    return {
-      date: month.toLocaleDateString("en-US", { month: "short" }),
-      subscribers: Math.round(280 + i * 25 + Math.random() * 20),
-    };
-  });
-
-  const planData = [
-    { name: "Monthly", value: data?.mrr ? Math.round(data.mrr * 0.34) : 4200, color: "#6366f1" },
-    { name: "Annual", value: data?.mrr ? Math.round(data.mrr * 0.55) : 6800, color: "#22c55e" },
-    { name: "Lifetime", value: data?.mrr ? Math.round(data.mrr * 0.11) : 1450, color: "#f59e0b" },
-  ];
 
   if (loading) {
     return (
@@ -89,6 +100,42 @@ export default function RevenuePage() {
     );
   }
 
+  // Process data for charts
+  const revenueChartData = revenueData.map((d) => ({
+    date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    revenue: d.revenue / 100,
+  }));
+
+  const subscriptionChartData = revenueData.map((d) => ({
+    date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    newSubs: d.newSubscriptions,
+    renewals: d.renewals,
+    cancellations: -d.cancellations,
+    churns: -d.churns,
+  }));
+
+  // Calculate cumulative subscribers
+  let cumulativeSubs = 0;
+  const subscriberGrowthData = revenueData.map((d) => {
+    cumulativeSubs += d.newSubscriptions - d.churns;
+    return {
+      date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      net: cumulativeSubs,
+    };
+  });
+
+  // Calculate total revenue
+  const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0) / 100;
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-[#f1f5f9]">Revenue</h1>
@@ -97,16 +144,18 @@ export default function RevenuePage() {
         <Card className="bg-[#f59e0b]/10 border-[#f59e0b]/50">
           <CardContent className="flex items-center gap-2 py-3">
             <AlertCircle className="w-4 h-4 text-[#f59e0b]" />
-            <span className="text-sm text-[#f59e0b]">
-              API connection error — showing sample data
-            </span>
+            <span className="text-sm text-[#f59e0b]">{error}</span>
           </CardContent>
         </Card>
       )}
 
       {/* Revenue KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0 }}
+        >
           <Card className="bg-[#111118] border-[#1e1e2e]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -114,49 +163,65 @@ export default function RevenuePage() {
                 <span className="text-xs text-[#94a3b8]">MRR</span>
               </div>
               <p className="text-2xl font-bold text-[#22c55e]">
-                {formatCurrency(data?.mrr || 0)}
+                {formatCurrency(overview?.mrr || 0)}
               </p>
             </CardContent>
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
           <Card className="bg-[#111118] border-[#1e1e2e]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="w-4 h-4 text-[#6366f1]" />
-                <span className="text-xs text-[#94a3b8]">Subscribers</span>
+                <span className="text-xs text-[#94a3b8]">
+                  Active Subscribers
+                </span>
               </div>
               <p className="text-2xl font-bold text-[#f1f5f9]">
-                {formatNumber(data?.activeSubscriptions || 0)}
+                {formatNumber(overview?.subscribers || 0)}
               </p>
             </CardContent>
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <Card className="bg-[#111118] border-[#1e1e2e]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-4 h-4 text-[#6366f1]" />
-                <span className="text-xs text-[#94a3b8]">Total Revenue</span>
+                <span className="text-xs text-[#94a3b8]">
+                  Total Revenue (tracked)
+                </span>
               </div>
               <p className="text-2xl font-bold text-[#f1f5f9]">
-                {formatCurrency(data?.revenue || 0)}
+                {formatCurrency(totalRevenue)}
               </p>
             </CardContent>
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           <Card className="bg-[#111118] border-[#1e1e2e]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <RefreshCw className="w-4 h-4 text-[#ef4444]" />
-                <span className="text-xs text-[#94a3b8]">Churn Rate</span>
+                <Zap className="w-4 h-4 text-[#f59e0b]" />
+                <span className="text-xs text-[#94a3b8]">Active Trials</span>
               </div>
-              <p className="text-2xl font-bold text-[#ef4444]">
-                {data?.churn?.toFixed(1) || "0.0"}%
+              <p className="text-2xl font-bold text-[#f59e0b]">
+                {formatNumber(overview?.activeTrials || 0)}
               </p>
             </CardContent>
           </Card>
@@ -165,12 +230,163 @@ export default function RevenuePage() {
 
       {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">
-        <MRRChart data={mrrData} />
-        <SubscriberChart data={subscriberData} />
+        {/* Daily Revenue */}
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardHeader>
+            <CardTitle className="text-[#f1f5f9] text-base">
+              Daily Revenue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={revenueChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                <XAxis
+                  dataKey="date"
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  interval={Math.max(
+                    0,
+                    Math.floor(revenueChartData.length / 10)
+                  )}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  tickFormatter={(v) => `$${v}`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#111118",
+                    border: "1px solid #1e1e2e",
+                    borderRadius: "8px",
+                    color: "#f1f5f9",
+                  }}
+                  formatter={(v: number | undefined) => [formatCurrency(v ?? 0), "Revenue"]}
+                />
+                <Bar
+                  dataKey="revenue"
+                  fill="#22c55e"
+                  radius={[2, 2, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Net Subscriber Growth */}
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardHeader>
+            <CardTitle className="text-[#f1f5f9] text-base">
+              Net Subscriber Growth
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <AreaChart data={subscriberGrowthData}>
+                <defs>
+                  <linearGradient
+                    id="colorNetSubs"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                <XAxis
+                  dataKey="date"
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  interval={Math.max(
+                    0,
+                    Math.floor(subscriberGrowthData.length / 10)
+                  )}
+                />
+                <YAxis stroke="#94a3b8" style={{ fontSize: "11px" }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#111118",
+                    border: "1px solid #1e1e2e",
+                    borderRadius: "8px",
+                    color: "#f1f5f9",
+                  }}
+                  formatter={(v: number | undefined) => [formatNumber(v ?? 0), "Net Subscribers"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="net"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  fill="url(#colorNetSubs)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Plan Breakdown */}
-      <PlanBreakdown data={planData} />
+      {/* Subscription Events */}
+      <Card className="bg-[#111118] border-[#1e1e2e]">
+        <CardHeader>
+          <CardTitle className="text-[#f1f5f9] text-base">
+            Daily Subscription Events
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={subscriptionChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+              <XAxis
+                dataKey="date"
+                stroke="#94a3b8"
+                style={{ fontSize: "11px" }}
+                interval={Math.max(
+                  0,
+                  Math.floor(subscriptionChartData.length / 10)
+                )}
+              />
+              <YAxis stroke="#94a3b8" style={{ fontSize: "11px" }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#111118",
+                  border: "1px solid #1e1e2e",
+                  borderRadius: "8px",
+                  color: "#f1f5f9",
+                }}
+              />
+              <Legend />
+              <Bar
+                dataKey="newSubs"
+                name="New Subscriptions"
+                fill="#22c55e"
+                stackId="positive"
+              />
+              <Bar
+                dataKey="renewals"
+                name="Renewals"
+                fill="#6366f1"
+                stackId="positive"
+              />
+              <Bar
+                dataKey="cancellations"
+                name="Cancellations"
+                fill="#f59e0b"
+                stackId="negative"
+              />
+              <Bar
+                dataKey="churns"
+                name="Expirations"
+                fill="#ef4444"
+                stackId="negative"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* MRR Goal Progress */}
       <Card className="bg-[#111118] border-[#1e1e2e]">
@@ -184,14 +400,14 @@ export default function RevenuePage() {
             <div className="flex justify-between text-sm">
               <span className="text-[#94a3b8]">Current MRR</span>
               <span className="text-[#f1f5f9] font-medium">
-                {formatCurrency(data?.mrr || 0)}
+                {formatCurrency(overview?.mrr || 0)}
               </span>
             </div>
             <div className="w-full bg-[#1e1e2e] rounded-full h-3">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{
-                  width: `${Math.min(((data?.mrr || 0) / 30000) * 100, 100)}%`,
+                  width: `${Math.min(((overview?.mrr || 0) / 30000) * 100, 100)}%`,
                 }}
                 transition={{ delay: 0.5, duration: 1 }}
                 className="bg-gradient-to-r from-[#6366f1] to-[#22c55e] h-3 rounded-full"

@@ -10,18 +10,28 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Bar,
+  BarChart,
+  Legend,
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp } from "lucide-react";
+import { DollarSign } from "lucide-react";
 
-interface HistoricalMetric {
+interface DailyRevenue {
   date: string;
-  mrr_cents: number | null;
+  revenue: number;
+  newSubscriptions: number;
+  renewals: number;
+  cancellations: number;
+  churns: number;
 }
 
 interface ChartDataPoint {
   date: string;
-  value: number;
+  label: string;
+  revenue: number;
+  newSubs: number;
+  renewals: number;
 }
 
 export function DashboardMRRChart() {
@@ -30,20 +40,25 @@ export function DashboardMRRChart() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchHistorical() {
+    async function fetchRevenue() {
       try {
-        const res = await fetch("/api/historical?days=30");
-        if (!res.ok) throw new Error("Failed to fetch historical data");
+        const res = await fetch("/api/charts/revenue");
+        if (!res.ok) throw new Error("Failed to fetch revenue data");
         const json = await res.json();
-        const points: ChartDataPoint[] = (json.metrics as HistoricalMetric[])
-          .filter((m) => m.mrr_cents != null)
-          .map((m) => ({
-            date: new Date(m.date).toLocaleDateString("en-US", {
+
+        const points: ChartDataPoint[] = (json.data as DailyRevenue[]).map(
+          (d) => ({
+            date: d.date,
+            label: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
             }),
-            value: (m.mrr_cents ?? 0) / 100,
-          }));
+            revenue: d.revenue / 100, // cents to dollars
+            newSubs: d.newSubscriptions,
+            renewals: d.renewals,
+          })
+        );
+
         setData(points);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unknown error");
@@ -51,54 +66,47 @@ export function DashboardMRRChart() {
         setLoading(false);
       }
     }
-    fetchHistorical();
+    fetchRevenue();
   }, []);
 
   return (
     <Card className="bg-[#111118] border-[#1e1e2e]">
       <CardHeader>
-        <CardTitle className="text-[#f1f5f9]">Revenue Trend</CardTitle>
+        <CardTitle className="text-[#f1f5f9] flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-[#22c55e]" />
+          Revenue History
+        </CardTitle>
+        <p className="text-xs text-[#94a3b8]">
+          Daily revenue from subscription events
+        </p>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
-            <div className="animate-pulse text-sm">Loading chart data…</div>
+            <div className="animate-pulse text-sm">Loading revenue data…</div>
           </div>
         ) : error ? (
           <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
             <p className="text-sm text-red-400">{error}</p>
           </div>
-        ) : data.length <= 1 ? (
-          <div className="h-[300px] flex flex-col items-center justify-center text-[#94a3b8] gap-2">
-            <TrendingUp className="w-8 h-8 text-[#6366f1] opacity-50" />
-            <p className="text-sm">
-              Tracking started — data will accumulate daily
-            </p>
-            {data.length === 1 && (
-              <p className="text-xs text-[#6366f1]">
-                Current MRR: {formatCurrency(data[0].value)}
-              </p>
-            )}
+        ) : data.length === 0 ? (
+          <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
+            <p className="text-sm">No revenue data available</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
               <XAxis
-                dataKey="date"
+                dataKey="label"
                 stroke="#94a3b8"
-                style={{ fontSize: "12px" }}
+                style={{ fontSize: "11px" }}
+                interval={Math.max(0, Math.floor(data.length / 10))}
               />
               <YAxis
                 stroke="#94a3b8"
-                style={{ fontSize: "12px" }}
-                tickFormatter={(value) => formatCurrency(value)}
+                style={{ fontSize: "11px" }}
+                tickFormatter={(value) => `$${value}`}
               />
               <Tooltip
                 contentStyle={{
@@ -109,17 +117,17 @@ export function DashboardMRRChart() {
                 }}
                 formatter={(value: number | undefined) => [
                   formatCurrency(value ?? 0),
-                  "MRR",
+                  "Revenue",
                 ]}
+                labelFormatter={(label) => label}
               />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#6366f1"
-                strokeWidth={2}
-                fill="url(#colorRevenue)"
+              <Bar
+                dataKey="revenue"
+                fill="#22c55e"
+                radius={[2, 2, 0, 0]}
+                name="Revenue"
               />
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
         )}
       </CardContent>

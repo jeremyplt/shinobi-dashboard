@@ -1,21 +1,28 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import {
+  TrendingUp,
+  DollarSign,
+  Users,
+  Shield,
+  Star,
+  UserPlus,
+  Zap,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 
 interface KPICardProps {
   title: string;
   value: string;
-  trend: number;
+  subtitle?: string;
+  icon: React.ReactNode;
+  color: string;
   index: number;
-  sparklineData?: number[];
 }
 
-function KPICard({ title, value, trend, index, sparklineData }: KPICardProps) {
-  const isPositive = trend >= 0;
-
+function KPICard({ title, value, subtitle, icon, color, index }: KPICardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -27,26 +34,17 @@ function KPICard({ title, value, trend, index, sparklineData }: KPICardProps) {
           <CardTitle className="text-sm font-medium text-[#94a3b8]">
             {title}
           </CardTitle>
+          <div className={`p-2 rounded-lg bg-opacity-10`} style={{ backgroundColor: `${color}15` }}>
+            {icon}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-[#f1f5f9] mb-2">
+          <div className="text-2xl font-bold text-[#f1f5f9] mb-1">
             {value}
           </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`flex items-center text-xs font-medium ${
-                isPositive ? "text-[#22c55e]" : "text-[#ef4444]"
-              }`}
-            >
-              {isPositive ? (
-                <TrendingUp className="w-3 h-3 mr-1" />
-              ) : (
-                <TrendingDown className="w-3 h-3 mr-1" />
-              )}
-              {formatPercent(Math.abs(trend))}
-            </span>
-            <span className="text-xs text-[#94a3b8]">vs last month</span>
-          </div>
+          {subtitle && (
+            <p className="text-xs text-[#94a3b8]">{subtitle}</p>
+          )}
         </CardContent>
       </Card>
     </motion.div>
@@ -56,13 +54,14 @@ function KPICard({ title, value, trend, index, sparklineData }: KPICardProps) {
 interface KPICardsProps {
   stats: {
     mrr: number;
-    mrrTrend: number;
     subscribers: number;
-    subscribersTrend: number;
+    totalUsers: number;
+    newUsersToday: number;
+    newUsersThisMonth: number;
     crashFreeRate: number;
-    crashFreeRateTrend: number;
     avgRating: number;
-    avgRatingTrend: number;
+    revenue28d: number;
+    activeTrials: number;
   };
 }
 
@@ -71,27 +70,42 @@ export function KPICards({ stats }: KPICardsProps) {
     {
       title: "Monthly Recurring Revenue",
       value: formatCurrency(stats.mrr),
-      trend: stats.mrrTrend,
+      subtitle: `${formatCurrency(stats.revenue28d)} revenue last 28d`,
+      icon: <DollarSign className="w-4 h-4" style={{ color: "#22c55e" }} />,
+      color: "#22c55e",
     },
     {
       title: "Active Subscribers",
       value: formatNumber(stats.subscribers),
-      trend: stats.subscribersTrend,
+      subtitle: `${stats.activeTrials} active trials`,
+      icon: <Users className="w-4 h-4" style={{ color: "#6366f1" }} />,
+      color: "#6366f1",
+    },
+    {
+      title: "Total Users",
+      value: formatNumber(stats.totalUsers),
+      subtitle: `+${formatNumber(stats.newUsersToday)} today · +${formatNumber(stats.newUsersThisMonth)} this month`,
+      icon: <UserPlus className="w-4 h-4" style={{ color: "#3b82f6" }} />,
+      color: "#3b82f6",
     },
     {
       title: "Crash-Free Rate",
-      value: `${stats.crashFreeRate.toFixed(1)}%`,
-      trend: stats.crashFreeRateTrend,
+      value: stats.crashFreeRate > 0 ? `${stats.crashFreeRate.toFixed(2)}%` : "—",
+      subtitle: "Android · last 7 days avg",
+      icon: <Shield className="w-4 h-4" style={{ color: "#f59e0b" }} />,
+      color: "#f59e0b",
     },
     {
       title: "Average Rating",
-      value: stats.avgRating.toFixed(1),
-      trend: stats.avgRatingTrend,
+      value: stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "—",
+      subtitle: "Across App Store & Play Store",
+      icon: <Star className="w-4 h-4" style={{ color: "#f59e0b" }} />,
+      color: "#f59e0b",
     },
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {cards.map((card, index) => (
         <KPICard key={card.title} {...card} index={index} />
       ))}
