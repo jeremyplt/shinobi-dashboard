@@ -412,9 +412,9 @@ export default function RevenuePage() {
                     borderRadius: "8px",
                     color: "#f1f5f9",
                   }}
-                  formatter={(v: number | undefined, name: string) => {
-                    if (name === "Churn Rate") return [`${v?.toFixed(2)}%`, name];
-                    return [v, name];
+                  formatter={(v: number | undefined, name: string | undefined) => {
+                    if (name === "Churn Rate") return [`${(v ?? 0).toFixed(2)}%`, name ?? ""];
+                    return [v ?? 0, name ?? ""];
                   }}
                 />
                 <Legend />
@@ -465,9 +465,9 @@ export default function RevenuePage() {
                     borderRadius: "8px",
                     color: "#f1f5f9",
                   }}
-                  formatter={(v: number | undefined, name: string) => {
-                    if (name === "Conversion Rate") return [`${v?.toFixed(2)}%`, name];
-                    return [v, name];
+                  formatter={(v: number | undefined, name: string | undefined) => {
+                    if (name === "Conversion Rate") return [`${(v ?? 0).toFixed(2)}%`, name ?? ""];
+                    return [v ?? 0, name ?? ""];
                   }}
                 />
                 <Legend />
