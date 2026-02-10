@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="bg-[#111118] border-[#1e1e2e]">
             <CardContent className="p-4">
@@ -207,6 +207,23 @@ export default function AnalyticsPage() {
                 {formatDuration(sessions?.avgSessionDuration || 0)}
               </p>
               <p className="text-xs text-[#64748b] mt-1">Average duration</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+          <Card className="bg-[#111118] border-[#1e1e2e]">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-[#ec4899]" />
+                <span className="text-xs text-[#94a3b8]">Stickiness</span>
+              </div>
+              <p className="text-2xl font-bold text-[#ec4899]">
+                {activeUsers?.mau
+                  ? `${((activeUsers.dau / activeUsers.mau) * 100).toFixed(1)}%`
+                  : "—"}
+              </p>
+              <p className="text-xs text-[#64748b] mt-1">DAU/MAU ratio</p>
             </CardContent>
           </Card>
         </motion.div>
