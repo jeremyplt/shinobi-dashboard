@@ -177,29 +177,72 @@ export async function fetchRevenueHistory(
 }
 
 /**
- * Simple currency conversion to USD cents
+ * Convert currency amount to USD cents
+ * Rates are approximate USD value per 1 unit of currency × 100 (to get cents)
+ * e.g., 1 EUR ≈ 1.10 USD → rate = 110 cents per EUR
  */
 function convertToUsdCents(amount: number, currency: string): number {
-  const rates: Record<string, number> = {
+  // Cents per 1 unit of the currency
+  const centsPerUnit: Record<string, number> = {
     USD: 100,
     EUR: 110,
-    GBP: 125,
+    GBP: 127,
     CAD: 73,
     AUD: 65,
-    JPY: 0.67,
-    BRL: 18,
-    KRW: 0.075,
-    CNY: 14,
-    MXN: 5,
-    SEK: 9.5,
-    PLN: 24,
     NZD: 60,
-    HUF: 0.27,
-    INR: 1.2,
+    CHF: 113,
+    // Asian
+    JPY: 0.67,     // 1 JPY = $0.0067
+    KRW: 0.075,    // 1 KRW = $0.00075
+    CNY: 14,       // 1 CNY = $0.14
+    INR: 1.2,      // 1 INR = $0.012
+    IDR: 0.0063,   // 1 IDR = $0.000063
+    PHP: 1.8,      // 1 PHP = $0.018
+    THB: 2.9,      // 1 THB = $0.029
+    VND: 0.004,    // 1 VND = $0.00004
+    MYR: 23,       // 1 MYR = $0.23
+    SGD: 75,       // 1 SGD = $0.75
+    TWD: 3.1,      // 1 TWD = $0.031
+    // Americas
+    BRL: 18,       // 1 BRL = $0.18
+    MXN: 5,        // 1 MXN = $0.05
+    COP: 0.023,    // 1 COP = $0.00023
+    ARS: 0.09,     // 1 ARS = $0.0009
+    CLP: 0.1,      // 1 CLP = $0.001
+    PEN: 27,       // 1 PEN = $0.27
+    // Europe (non-EUR)
+    SEK: 9.5,      // 1 SEK = $0.095
+    NOK: 9.3,      // 1 NOK = $0.093
+    DKK: 14.7,     // 1 DKK = $0.147
+    PLN: 24,       // 1 PLN = $0.24
+    CZK: 4.3,      // 1 CZK = $0.043
+    HUF: 0.27,     // 1 HUF = $0.0027
+    RON: 22,       // 1 RON = $0.22
+    BGN: 56,       // 1 BGN = $0.56
+    HRK: 14.5,     // 1 HRK = $0.145
+    // Middle East / Africa
+    TRY: 3,        // 1 TRY = $0.03
+    ZAR: 5.5,      // 1 ZAR = $0.055
+    AED: 27,       // 1 AED = $0.27
+    SAR: 27,       // 1 SAR = $0.27
+    ILS: 28,       // 1 ILS = $0.28
+    EGP: 2,        // 1 EGP = $0.02
+    NGN: 0.065,    // 1 NGN = $0.00065
+    // CIS
+    RUB: 1.1,      // 1 RUB = $0.011
+    UAH: 2.4,      // 1 UAH = $0.024
+    KZT: 0.21,     // 1 KZT = $0.0021
   };
 
-  const rate = rates[currency];
-  if (!rate) return Math.round(amount * 100);
+  const rate = centsPerUnit[currency];
+  if (!rate) {
+    // Unknown currency: log warning and estimate conservatively
+    console.warn(`Unknown currency: ${currency} for amount ${amount}`);
+    // If amount > 100, likely a weak currency — convert very conservatively
+    if (amount > 1000) return Math.round(amount * 0.01); // assume ~1 cent per 100 units
+    if (amount > 100) return Math.round(amount * 0.1);   // assume ~10 cents per 100 units
+    return Math.round(amount * 100); // assume USD-like
+  }
   return Math.round(amount * rate);
 }
 
