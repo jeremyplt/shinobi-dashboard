@@ -19,6 +19,7 @@ import { formatCurrency, formatNumber } from "@/lib/utils";
 import { RevenueHistoryChart } from "@/components/revenue/revenue-history-chart";
 import { SubscriptionsChart } from "@/components/revenue/subscriptions-chart";
 import { MRREvolutionChart } from "@/components/revenue/mrr-evolution-chart";
+import { PlanBreakdownChart } from "@/components/revenue/plan-breakdown-chart";
 
 interface OverviewData {
   mrr: number;
@@ -278,13 +279,14 @@ export default function RevenuePage() {
       {/* Revenue History Chart (from Firestore events) */}
       <RevenueHistoryChart data={revenueHistory} />
 
-      {/* Subscription Activity + Period Summary */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <SubscriptionsChart data={revenueHistory} />
-        </div>
+      {/* Plan Breakdown + Subscription Activity */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <PlanBreakdownChart />
+        <SubscriptionsChart data={revenueHistory} />
+      </div>
 
-        <Card className="bg-[#111118] border-[#1e1e2e]">
+      {/* Period Summary */}
+      <Card className="bg-[#111118] border-[#1e1e2e]">
           <CardHeader className="pb-2">
             <CardTitle className="text-[#f1f5f9] text-base">
               90-Day Summary
@@ -328,8 +330,7 @@ export default function RevenuePage() {
               </p>
             </div>
           </CardContent>
-        </Card>
-      </div>
+      </Card>
     </div>
   );
 }
