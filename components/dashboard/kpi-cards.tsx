@@ -2,13 +2,12 @@
 
 import { motion } from "framer-motion";
 import {
-  TrendingUp,
   DollarSign,
   Users,
   Shield,
   Star,
   UserPlus,
-  Zap,
+  Target,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatNumber } from "@/lib/utils";
@@ -20,21 +19,22 @@ interface KPICardProps {
   icon: React.ReactNode;
   color: string;
   index: number;
+  highlight?: boolean;
 }
 
-function KPICard({ title, value, subtitle, icon, color, index }: KPICardProps) {
+function KPICard({ title, value, subtitle, icon, color, index, highlight }: KPICardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
+      transition={{ delay: index * 0.08 }}
     >
-      <Card className="bg-[#111118] border-[#1e1e2e] hover:border-[#6366f1]/50 transition-colors">
+      <Card className={`bg-[#111118] border-[#1e1e2e] hover:border-[#6366f1]/50 transition-all duration-200 ${highlight ? "ring-1 ring-[#22c55e]/20" : ""}`}>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-[#94a3b8]">
             {title}
           </CardTitle>
-          <div className={`p-2 rounded-lg bg-opacity-10`} style={{ backgroundColor: `${color}15` }}>
+          <div className="p-2 rounded-lg" style={{ backgroundColor: `${color}15` }}>
             {icon}
           </div>
         </CardHeader>
@@ -66,13 +66,16 @@ interface KPICardsProps {
 }
 
 export function KPICards({ stats }: KPICardsProps) {
+  const mrrGoalPercent = Math.min((stats.mrr / 30000) * 100, 100).toFixed(1);
+
   const cards = [
     {
-      title: "Monthly Recurring Revenue",
+      title: "MRR",
       value: formatCurrency(stats.mrr),
-      subtitle: `${formatCurrency(stats.revenue28d)} revenue last 28d`,
+      subtitle: `${mrrGoalPercent}% of $30k goal · ARR ${formatCurrency(stats.mrr * 12)}`,
       icon: <DollarSign className="w-4 h-4" style={{ color: "#22c55e" }} />,
       color: "#22c55e",
+      highlight: true,
     },
     {
       title: "Active Subscribers",
@@ -92,15 +95,15 @@ export function KPICards({ stats }: KPICardsProps) {
       title: "Crash-Free Rate",
       value: stats.crashFreeRate > 0 ? `${stats.crashFreeRate.toFixed(2)}%` : "—",
       subtitle: "Android · last 7 days avg",
-      icon: <Shield className="w-4 h-4" style={{ color: "#f59e0b" }} />,
-      color: "#f59e0b",
+      icon: <Shield className="w-4 h-4" style={{ color: stats.crashFreeRate >= 99 ? "#22c55e" : "#f59e0b" }} />,
+      color: stats.crashFreeRate >= 99 ? "#22c55e" : "#f59e0b",
     },
     {
       title: "Average Rating",
-      value: stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "—",
-      subtitle: "Across App Store & Play Store",
-      icon: <Star className="w-4 h-4" style={{ color: "#f59e0b" }} />,
-      color: "#f59e0b",
+      value: stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)} ⭐` : "—",
+      subtitle: "App Store & Play Store",
+      icon: <Star className="w-4 h-4" style={{ color: stats.avgRating >= 4.5 ? "#22c55e" : "#f59e0b" }} />,
+      color: stats.avgRating >= 4.5 ? "#22c55e" : "#f59e0b",
     },
   ];
 

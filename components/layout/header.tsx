@@ -1,11 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Calendar, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/dashboard/analytics": "Analytics",
   "/dashboard/reviews": "Reviews",
   "/dashboard/revenue": "Revenue",
   "/dashboard/errors": "Errors",
@@ -25,14 +26,17 @@ export function Header() {
           size="sm"
           className="text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-[#1e1e2e]"
           onClick={() => window.location.reload()}
+          title="Refresh data"
         >
           <RefreshCw className="w-4 h-4" />
         </Button>
-        <div className="flex items-center gap-2 text-sm text-[#94a3b8]">
-          <Calendar className="w-4 h-4" />
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111118] border border-[#1e1e2e] text-sm text-[#94a3b8]">
+          <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
+          <span>Live</span>
+          <span className="text-[#64748b]">·</span>
           <span>
             {new Date().toLocaleDateString("en-US", {
-              month: "long",
+              month: "short",
               day: "numeric",
               year: "numeric",
             })}
