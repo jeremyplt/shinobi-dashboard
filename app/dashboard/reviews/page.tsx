@@ -7,7 +7,8 @@ import { RatingStats } from "@/components/reviews/rating-stats";
 import { ReviewFilters } from "@/components/reviews/review-filters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, MessageSquare } from "lucide-react";
+import { AlertCircle, MessageSquare, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Review {
   id: string;
@@ -115,9 +116,20 @@ export default function ReviewsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[#f1f5f9]">Reviews</h1>
-        <div className="flex items-center gap-2 text-sm text-[#94a3b8]">
-          <MessageSquare className="w-4 h-4" />
-          {filteredAndSortedReviews.length} of {reviews.length} reviews
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.open("/api/export/reviews", "_blank")}
+            className="text-xs text-[#94a3b8] hover:text-[#f1f5f9]"
+          >
+            <Download className="w-3.5 h-3.5 mr-1" />
+            Export CSV
+          </Button>
+          <div className="flex items-center gap-2 text-sm text-[#94a3b8]">
+            <MessageSquare className="w-4 h-4" />
+            {filteredAndSortedReviews.length} of {reviews.length}
+          </div>
         </div>
       </div>
 
