@@ -5,6 +5,7 @@ import { ErrorsChart } from "@/components/dashboard/errors-chart";
 import { CrashRateChart } from "@/components/dashboard/crash-chart";
 import { ReviewsSummary } from "@/components/dashboard/reviews-summary";
 import { ErrorsSummary } from "@/components/dashboard/errors-summary";
+import { MRRGoalMini } from "@/components/dashboard/mrr-goal-mini";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { fetchStats } from "@/lib/data/stats";
@@ -31,19 +32,49 @@ export default async function DashboardPage() {
       {/* KPI Cards */}
       <KPICards stats={stats} />
 
-      {/* Charts Row 1: Revenue + User Growth */}
+      {/* MRR Goal + Revenue Chart */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <DashboardMRRChart />
+        </div>
+        <div className="space-y-4">
+          <MRRGoalMini mrr={stats.mrr} />
+          <Card className="bg-[#111118] border-[#1e1e2e]">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="text-sm font-medium text-[#f1f5f9]">Quick Stats</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-3 rounded-lg bg-[#0a0a0f]">
+                  <p className="text-lg font-bold text-[#22c55e]">${Math.round(stats.mrr * 12 / 1000)}k</p>
+                  <p className="text-[10px] text-[#64748b]">ARR</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-[#0a0a0f]">
+                  <p className="text-lg font-bold text-[#f59e0b]">${Math.round(stats.revenue28d / 28)}</p>
+                  <p className="text-[10px] text-[#64748b]">Daily Avg</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-[#0a0a0f]">
+                  <p className="text-lg font-bold text-[#6366f1]">{stats.activeTrials}</p>
+                  <p className="text-[10px] text-[#64748b]">Active Trials</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-[#0a0a0f]">
+                  <p className="text-lg font-bold text-[#ef4444]">{stats.totalErrors}</p>
+                  <p className="text-[10px] text-[#64748b]">Errors Today</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Charts Row: User Growth + Errors */}
       <div className="grid gap-4 md:grid-cols-2">
-        <DashboardMRRChart />
         <UserGrowthChart />
-      </div>
-
-      {/* Charts Row 2: Errors + Crash Rate */}
-      <div className="grid gap-4 md:grid-cols-2">
         <ErrorsChart />
-        <CrashRateChart />
       </div>
 
-      {/* Recent Activity */}
+      {/* Crash Rate Chart */}
+      <CrashRateChart />
+
+      {/* Recent Activity: Reviews + Errors */}
       <div className="grid gap-4 md:grid-cols-2">
         <ReviewsSummary />
         <ErrorsSummary />
