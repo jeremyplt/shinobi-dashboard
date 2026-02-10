@@ -138,6 +138,58 @@ export default function ErrorsPage() {
         </Card>
       )}
 
+      {/* KPI Summary */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-[#ef4444]" />
+              <span className="text-xs text-[#94a3b8]">Unresolved Issues</span>
+            </div>
+            <p className="text-2xl font-bold text-[#ef4444]">
+              {formatNumber(issues.length)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-[#f59e0b]" />
+              <span className="text-xs text-[#94a3b8]">Users Affected</span>
+            </div>
+            <p className="text-2xl font-bold text-[#f59e0b]">
+              {formatNumber(issues.reduce((sum, i) => sum + i.userCount, 0))}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="w-4 h-4 text-[#22c55e]" />
+              <span className="text-xs text-[#94a3b8]">Crash-Free Rate</span>
+            </div>
+            <p className="text-2xl font-bold text-[#22c55e]">
+              {crashChartData.length > 0
+                ? `${crashChartData[crashChartData.length - 1].crashFreeRate}%`
+                : "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-[#6366f1]" />
+              <span className="text-xs text-[#94a3b8]">Events Today</span>
+            </div>
+            <p className="text-2xl font-bold text-[#6366f1]">
+              {errorChartData.length > 0
+                ? formatNumber(errorChartData[errorChartData.length - 1]?.errors || 0)
+                : "—"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Charts Grid 1 */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Error Events (90d) */}
