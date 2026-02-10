@@ -20,6 +20,8 @@ import { RevenueHistoryChart } from "@/components/revenue/revenue-history-chart"
 import { SubscriptionsChart } from "@/components/revenue/subscriptions-chart";
 import { MRREvolutionChart } from "@/components/revenue/mrr-evolution-chart";
 import { PlanBreakdownChart } from "@/components/revenue/plan-breakdown-chart";
+import { ConversionChart } from "@/components/revenue/conversion-chart";
+import { ChurnChart } from "@/components/revenue/churn-chart";
 
 interface OverviewData {
   mrr: number;
@@ -283,6 +285,12 @@ export default function RevenuePage() {
       <div className="grid gap-6 md:grid-cols-2">
         <PlanBreakdownChart />
         <SubscriptionsChart data={revenueHistory} />
+      </div>
+
+      {/* Conversion + Churn */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <ConversionChart />
+        <ChurnChart />
       </div>
 
       {/* Period Summary */}
