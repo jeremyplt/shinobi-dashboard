@@ -18,12 +18,12 @@ import {
 import { cn } from "@/lib/utils";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { name: "Reviews", href: "/dashboard/reviews", icon: MessageSquare },
-  { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign },
-  { name: "Errors", href: "/dashboard/errors", icon: AlertCircle },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, shortcut: "1" },
+  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, shortcut: "2" },
+  { name: "Reviews", href: "/dashboard/reviews", icon: MessageSquare, shortcut: "3" },
+  { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign, shortcut: "4" },
+  { name: "Errors", href: "/dashboard/errors", icon: AlertCircle, shortcut: "5" },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings, shortcut: "6" },
 ];
 
 export function Sidebar() {
@@ -74,10 +74,19 @@ export function Sidebar() {
                   opacity: collapsed ? 0 : 1,
                   width: collapsed ? 0 : "auto",
                 }}
-                className="overflow-hidden whitespace-nowrap"
+                className="overflow-hidden whitespace-nowrap flex-1"
               >
                 {item.name}
               </motion.span>
+              {!collapsed && item.shortcut && (
+                <motion.kbd
+                  initial={false}
+                  animate={{ opacity: collapsed ? 0 : 0.5 }}
+                  className="hidden md:inline-block text-[10px] text-[#64748b] bg-[#1e1e2e] px-1.5 py-0.5 rounded font-mono"
+                >
+                  ⌥{item.shortcut}
+                </motion.kbd>
+              )}
             </Link>
           );
         })}
