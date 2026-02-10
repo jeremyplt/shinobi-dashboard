@@ -9,6 +9,7 @@ import {
   MessageSquare,
   DollarSign,
   AlertCircle,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
   X,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Reviews", href: "/dashboard/reviews", icon: MessageSquare },
   { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign },
   { name: "Errors", href: "/dashboard/errors", icon: AlertCircle },
