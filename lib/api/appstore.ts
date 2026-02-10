@@ -14,11 +14,9 @@ export interface AppStoreReview {
 function getPrivateKey(): string {
   const envKey = process.env.APPSTORE_PRIVATE_KEY;
   if (envKey) {
-    // Handle both formats: raw key and base64 encoded
-    if (envKey.includes("BEGIN")) {
-      return envKey.replace(/\\n/g, "\n");
-    }
-    return Buffer.from(envKey, "base64").toString("utf-8");
+    // Next.js .env loader handles multi-line quoted values correctly
+    // Just return the key as-is (it already has proper newlines)
+    return envKey;
   }
 
   // Fallback: try to read from file
