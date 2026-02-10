@@ -6,6 +6,7 @@ import { CrashRateChart } from "@/components/dashboard/crash-chart";
 import { ReviewsSummary } from "@/components/dashboard/reviews-summary";
 import { ErrorsSummary } from "@/components/dashboard/errors-summary";
 import { MRRGoalMini } from "@/components/dashboard/mrr-goal-mini";
+import { DashboardAlerts } from "@/components/dashboard/alerts";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { fetchStats } from "@/lib/data/stats";
@@ -28,6 +29,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Smart Alerts */}
+      <DashboardAlerts stats={stats} />
 
       {/* KPI Cards */}
       <KPICards stats={stats} />
