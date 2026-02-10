@@ -10,9 +10,12 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -64,6 +67,26 @@ interface ConversionDataPoint {
   trialsConverted: number;
 }
 
+interface ARPUDataPoint {
+  date: string;
+  arpu: number;
+  totalRevenue: number;
+  activeUsers: number;
+}
+
+interface RevenueByCountry {
+  country: string;
+  revenue: number;
+  percentage: number;
+  transactions: number;
+}
+
+interface LTVEstimate {
+  avgSubscriptionDuration: number;
+  avgMonthlyRevenue: number;
+  estimatedLTV: number;
+}
+
 export default function RevenuePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,16 +95,31 @@ export default function RevenuePage() {
   const [mrrEvolution, setMrrEvolution] = useState<MRRDataPoint[]>([]);
   const [churnData, setChurnData] = useState<ChurnDataPoint[]>([]);
   const [conversionData, setConversionData] = useState<ConversionDataPoint[]>([]);
+  const [arpuData, setArpuData] = useState<ARPUDataPoint[]>([]);
+  const [revenueByCountry, setRevenueByCountry] = useState<RevenueByCountry[]>([]);
+  const [ltvData, setLtvData] = useState<LTVEstimate | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [revenueRes, statsRes, mrrRes, churnRes, conversionRes] = await Promise.all([
+        const [
+          revenueRes,
+          statsRes,
+          mrrRes,
+          churnRes,
+          conversionRes,
+          arpuRes,
+          countryRes,
+          ltvRes
+        ] = await Promise.all([
           fetch("/api/charts/revenue"),
           fetch("/api/stats"),
           fetch("/api/charts/mrr-evolution"),
           fetch("/api/charts/churn-rate"),
           fetch("/api/charts/conversion-rate"),
+          fetch("/api/analytics/arpu"),
+          fetch("/api/analytics/revenue-by-country"),
+          fetch("/api/analytics/ltv"),
         ]);
 
         if (!revenueRes.ok) throw new Error("Failed to fetch revenue data");
@@ -92,6 +130,9 @@ export default function RevenuePage() {
         const mrrJson = await mrrRes.json();
         const churnJson = await churnRes.json();
         const conversionJson = await conversionRes.json();
+        const arpuJson = await arpuRes.json();
+        const countryJson = await countryRes.json();
+        const ltvJson = await ltvRes.json();
 
         setRevenueData(revenueJson.data || []);
         setOverview({
@@ -103,6 +144,9 @@ export default function RevenuePage() {
         setMrrEvolution(mrrJson.data || []);
         setChurnData(churnJson.data || []);
         setConversionData(conversionJson.data || []);
+        setArpuData(arpuJson.data || []);
+        setRevenueByCountry(countryJson.data || []);
+        setLtvData(ltvJson.data || null);
 
         if (revenueJson.error) setError(revenueJson.error);
       } catch (err) {
@@ -597,6 +641,141 @@ export default function RevenuePage() {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Analytics Grid */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* ARPU Chart */}
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardHeader>
+            <CardTitle className="text-[#f1f5f9] text-base">
+              ARPU (Average Revenue Per User)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={arpuData.map((d) => ({
+                date: d.date,
+                arpu: d.arpu / 100,
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                <XAxis
+                  dataKey="date"
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  interval={Math.max(0, Math.floor(arpuData.length / 6))}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  tickFormatter={(v) => `$${v.toFixed(0)}`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#111118",
+                    border: "1px solid #1e1e2e",
+                    borderRadius: "8px",
+                    color: "#f1f5f9",
+                  }}
+                  formatter={(v: number | undefined) => [formatCurrency(v ?? 0), "ARPU"]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="arpu"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ fill: "#6366f1", r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Revenue by Country (Currency) */}
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardHeader>
+            <CardTitle className="text-[#f1f5f9] text-base">
+              Revenue by Currency (Last 90d)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {revenueByCountry.slice(0, 8).map((item, i) => (
+                <div key={item.country} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{
+                        backgroundColor: [
+                          "#22c55e",
+                          "#6366f1",
+                          "#f59e0b",
+                          "#ef4444",
+                          "#8b5cf6",
+                          "#ec4899",
+                          "#06b6d4",
+                          "#84cc16",
+                        ][i % 8],
+                      }}
+                    />
+                    <span className="text-sm text-[#f1f5f9] font-medium">
+                      {item.country}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-[#f1f5f9] font-medium">
+                      {formatCurrency(item.revenue / 100)}
+                    </div>
+                    <div className="text-xs text-[#94a3b8]">
+                      {item.percentage.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* LTV Stats */}
+      {ltvData && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="bg-[#111118] border-[#1e1e2e]">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-[#6366f1]" />
+                <span className="text-xs text-[#94a3b8]">Avg Subscription Duration</span>
+              </div>
+              <p className="text-2xl font-bold text-[#f1f5f9]">
+                {ltvData.avgSubscriptionDuration} days
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#111118] border-[#1e1e2e]">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="w-4 h-4 text-[#22c55e]" />
+                <span className="text-xs text-[#94a3b8]">Avg Monthly Revenue</span>
+              </div>
+              <p className="text-2xl font-bold text-[#22c55e]">
+                {formatCurrency(ltvData.avgMonthlyRevenue / 100)}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#111118] border-[#1e1e2e]">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-[#6366f1]" />
+                <span className="text-xs text-[#94a3b8]">Estimated LTV</span>
+              </div>
+              <p className="text-2xl font-bold text-[#6366f1]">
+                {formatCurrency(ltvData.estimatedLTV / 100)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* MRR Goal Progress */}
       <Card className="bg-[#111118] border-[#1e1e2e]">

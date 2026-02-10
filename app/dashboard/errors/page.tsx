@@ -40,29 +40,39 @@ interface DailyCrashRate {
   userPerceivedCrashRate: number;
 }
 
+interface DailyAnrRate {
+  date: string;
+  anrRate: number;
+  userPerceivedAnrRate: number;
+}
+
 export default function ErrorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [issues, setIssues] = useState<SentryIssue[]>([]);
   const [errorHistory, setErrorHistory] = useState<DailyErrors[]>([]);
   const [crashHistory, setCrashHistory] = useState<DailyCrashRate[]>([]);
+  const [anrHistory, setAnrHistory] = useState<DailyAnrRate[]>([]);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [sentryRes, errorsRes, crashesRes] = await Promise.all([
+        const [sentryRes, errorsRes, crashesRes, anrRes] = await Promise.all([
           fetch("/api/sentry"),
           fetch("/api/charts/errors?days=90"),
           fetch("/api/charts/crashes?days=90"),
+          fetch("/api/charts/anr-rate"),
         ]);
 
         const sentryData = await sentryRes.json();
         const errorsData = await errorsRes.json();
         const crashesData = await crashesRes.json();
+        const anrData = await anrRes.json();
 
         setIssues(sentryData.issues || []);
         setErrorHistory(errorsData.data || []);
         setCrashHistory(crashesData.crashRates || []);
+        setAnrHistory(anrData.data || []);
         setError(!!sentryData.error);
       } catch (err) {
         console.error("Failed to fetch errors:", err);
@@ -105,6 +115,14 @@ export default function ErrorsPage() {
       Math.round((1 - d.userPerceivedCrashRate) * 10000) / 100,
   }));
 
+  const anrChartData = anrHistory.map((d) => ({
+    date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    anrRate: d.userPerceivedAnrRate * 100,
+  }));
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-[#f1f5f9]">Errors & Crashes</h1>
@@ -120,8 +138,8 @@ export default function ErrorsPage() {
         </Card>
       )}
 
-      {/* Charts */}
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Charts Grid 1 */}
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Error Events (90d) */}
         <Card className="bg-[#111118] border-[#1e1e2e]">
           <CardHeader>
@@ -220,6 +238,62 @@ export default function ErrorsPage() {
                     type="monotone"
                     dataKey="crashFreeRate"
                     stroke="#22c55e"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ANR Rate (90d) */}
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardHeader>
+            <CardTitle className="text-[#f1f5f9] text-base flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-[#f59e0b]" />
+              Android ANR Rate (90d)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {anrChartData.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-[#94a3b8]">
+                No data available
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={anrChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#94a3b8"
+                    style={{ fontSize: "10px" }}
+                    interval={Math.max(
+                      0,
+                      Math.floor(anrChartData.length / 8)
+                    )}
+                  />
+                  <YAxis
+                    stroke="#94a3b8"
+                    style={{ fontSize: "10px" }}
+                    tickFormatter={(v) => `${v.toFixed(2)}%`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#111118",
+                      border: "1px solid #1e1e2e",
+                      borderRadius: "8px",
+                      color: "#f1f5f9",
+                    }}
+                    formatter={(v: number | undefined) => [
+                      `${(v ?? 0).toFixed(3)}%`,
+                      "ANR Rate",
+                    ]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="anrRate"
+                    stroke="#f59e0b"
                     strokeWidth={2}
                     dot={false}
                   />
