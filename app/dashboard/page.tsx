@@ -5,6 +5,7 @@ import { ErrorsChart } from "@/components/dashboard/errors-chart";
 import { CrashRateChart } from "@/components/dashboard/crash-chart";
 import { ReviewsSummary } from "@/components/dashboard/reviews-summary";
 import { ErrorsSummary } from "@/components/dashboard/errors-summary";
+import { NegativeReviews } from "@/components/dashboard/negative-reviews";
 import { MRRGoalMini } from "@/components/dashboard/mrr-goal-mini";
 import { DashboardAlerts } from "@/components/dashboard/alerts";
 import { Card, CardContent } from "@/components/ui/card";
@@ -78,10 +79,11 @@ export default async function DashboardPage() {
       {/* Crash Rate Chart */}
       <CrashRateChart />
 
-      {/* Recent Activity: Reviews + Errors */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Recent Activity: Reviews + Errors + Negative */}
+      <div className="grid gap-4 md:grid-cols-3">
         <ReviewsSummary />
         <ErrorsSummary />
+        <NegativeReviews />
       </div>
     </div>
   );
