@@ -80,7 +80,7 @@ export function DAUChart({
                   borderRadius: "8px",
                   color: "#f1f5f9",
                 }}
-                formatter={(v: number) => [formatNumber(v), "Users"]}
+                formatter={(v: number | undefined) => [formatNumber(v ?? 0), "Users"]}
               />
               <Area
                 type="monotone"

@@ -66,7 +66,7 @@ export function SessionsChart({ data }: SessionsChartProps) {
                   borderRadius: "8px",
                   color: "#f1f5f9",
                 }}
-                formatter={(v: number) => [formatNumber(v), "Sessions"]}
+                formatter={(v: number | undefined) => [formatNumber(v ?? 0), "Sessions"]}
               />
               <Bar dataKey="sessions" fill="#22c55e" radius={[4, 4, 0, 0]} opacity={0.8} />
             </BarChart>
