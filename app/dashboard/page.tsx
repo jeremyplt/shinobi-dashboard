@@ -5,48 +5,25 @@ import { ReviewsSummary } from "@/components/dashboard/reviews-summary";
 import { ErrorsSummary } from "@/components/dashboard/errors-summary";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
-
-async function getStats() {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const response = await fetch(`${baseUrl}/api/stats`, {
-      cache: "no-store",
-    });
-    
-    if (!response.ok) {
-      throw new Error("Failed to fetch stats");
-    }
-    
-    return response.json();
-  } catch (error) {
-    console.error("Error fetching stats:", error);
-    // Return mock data on error
-    return {
-      mrr: 12450,
-      mrrTrend: 8.5,
-      subscribers: 523,
-      subscribersTrend: 12.3,
-      crashFreeRate: 99.2,
-      crashFreeRateTrend: 2.1,
-      avgRating: 4.7,
-      avgRatingTrend: 0.3,
-      hasErrors: true,
-    };
-  }
-}
+import { fetchStats } from "@/lib/data/stats";
+import { fetchRevenueHistory } from "@/lib/data/revenue";
 
 export default async function DashboardPage() {
-  const stats = await getStats();
+  // Fetch data directly (no self-fetch antipattern)
+  const stats = await fetchStats();
+  const revenueData = await fetchRevenueHistory();
+
+  const hasErrors = !!stats.error || !!revenueData.error;
 
   return (
     <div className="space-y-6">
       {/* Error Banner */}
-      {stats.hasErrors && (
+      {hasErrors && (
         <Card className="bg-[#f59e0b]/10 border-[#f59e0b]/50">
           <CardContent className="flex items-center gap-2 py-3">
             <AlertCircle className="w-4 h-4 text-[#f59e0b]" />
             <span className="text-sm text-[#f59e0b]">
-              API connection error — showing cached data
+              {stats.error || revenueData.error}
             </span>
           </CardContent>
         </Card>
@@ -57,8 +34,8 @@ export default async function DashboardPage() {
 
       {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2">
-        <DashboardMRRChart />
-        <UserGrowthChart />
+        <DashboardMRRChart data={revenueData.mrrHistory} />
+        <UserGrowthChart data={revenueData.subscribersHistory} />
       </div>
 
       {/* Recent Activity */}
