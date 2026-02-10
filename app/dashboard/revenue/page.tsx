@@ -18,6 +18,7 @@ import {
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { RevenueHistoryChart } from "@/components/revenue/revenue-history-chart";
 import { SubscriptionsChart } from "@/components/revenue/subscriptions-chart";
+import { MRREvolutionChart } from "@/components/revenue/mrr-evolution-chart";
 
 interface OverviewData {
   mrr: number;
@@ -271,7 +272,10 @@ export default function RevenuePage() {
         </CardContent>
       </Card>
 
-      {/* Revenue History Chart */}
+      {/* MRR Evolution (from daily snapshots) */}
+      <MRREvolutionChart />
+
+      {/* Revenue History Chart (from Firestore events) */}
       <RevenueHistoryChart data={revenueHistory} />
 
       {/* Subscription Activity + Period Summary */}
