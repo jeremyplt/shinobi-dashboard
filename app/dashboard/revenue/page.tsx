@@ -44,18 +44,44 @@ interface OverviewData {
   activeTrials: number;
 }
 
+interface MRRDataPoint {
+  date: string;
+  mrr: number;
+  subscribers: number;
+}
+
+interface ChurnDataPoint {
+  date: string;
+  churnRate: number;
+  churned: number;
+  activeStart: number;
+}
+
+interface ConversionDataPoint {
+  date: string;
+  conversionRate: number;
+  trialsStarted: number;
+  trialsConverted: number;
+}
+
 export default function RevenuePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revenueData, setRevenueData] = useState<DailyRevenue[]>([]);
   const [overview, setOverview] = useState<OverviewData | null>(null);
+  const [mrrEvolution, setMrrEvolution] = useState<MRRDataPoint[]>([]);
+  const [churnData, setChurnData] = useState<ChurnDataPoint[]>([]);
+  const [conversionData, setConversionData] = useState<ConversionDataPoint[]>([]);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [revenueRes, statsRes] = await Promise.all([
+        const [revenueRes, statsRes, mrrRes, churnRes, conversionRes] = await Promise.all([
           fetch("/api/charts/revenue"),
           fetch("/api/stats"),
+          fetch("/api/charts/mrr-evolution"),
+          fetch("/api/charts/churn-rate"),
+          fetch("/api/charts/conversion-rate"),
         ]);
 
         if (!revenueRes.ok) throw new Error("Failed to fetch revenue data");
@@ -63,6 +89,9 @@ export default function RevenuePage() {
 
         const revenueJson = await revenueRes.json();
         const statsJson = await statsRes.json();
+        const mrrJson = await mrrRes.json();
+        const churnJson = await churnRes.json();
+        const conversionJson = await conversionRes.json();
 
         setRevenueData(revenueJson.data || []);
         setOverview({
@@ -71,6 +100,9 @@ export default function RevenuePage() {
           revenue28d: statsJson.revenue28d || 0,
           activeTrials: statsJson.activeTrials || 0,
         });
+        setMrrEvolution(mrrJson.data || []);
+        setChurnData(churnJson.data || []);
+        setConversionData(conversionJson.data || []);
 
         if (revenueJson.error) setError(revenueJson.error);
       } catch (err) {
@@ -228,8 +260,186 @@ export default function RevenuePage() {
         </motion.div>
       </div>
 
+      {/* MRR Evolution Chart (Full Width) */}
+      <Card className="bg-[#111118] border-[#1e1e2e]">
+        <CardHeader>
+          <CardTitle className="text-[#f1f5f9] text-base flex items-center justify-between">
+            <span>MRR Evolution</span>
+            <span className="text-sm text-[#94a3b8] font-normal">
+              Goal: $30,000/mo
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={350}>
+            <AreaChart data={mrrEvolution.map((d) => ({
+              date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              }),
+              mrr: d.mrr / 100,
+              goal: 30000,
+            }))}>
+              <defs>
+                <linearGradient id="colorMRR" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+              <XAxis
+                dataKey="date"
+                stroke="#94a3b8"
+                style={{ fontSize: "11px" }}
+                interval={Math.max(0, Math.floor(mrrEvolution.length / 10))}
+              />
+              <YAxis
+                stroke="#94a3b8"
+                style={{ fontSize: "11px" }}
+                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#111118",
+                  border: "1px solid #1e1e2e",
+                  borderRadius: "8px",
+                  color: "#f1f5f9",
+                }}
+                formatter={(v: number | undefined) => [formatCurrency(v ?? 0), "MRR"]}
+              />
+              <Legend />
+              <Area
+                type="monotone"
+                dataKey="mrr"
+                name="MRR"
+                stroke="#22c55e"
+                strokeWidth={2}
+                fill="url(#colorMRR)"
+              />
+              <Line
+                type="monotone"
+                dataKey="goal"
+                name="Goal"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
       {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Churn Rate */}
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardHeader>
+            <CardTitle className="text-[#f1f5f9] text-base">
+              Weekly Churn Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={churnData.map((d) => ({
+                date: new Date(d.date + "T00:00:00").toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                }),
+                churnRate: d.churnRate,
+                churned: d.churned,
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                <XAxis
+                  dataKey="date"
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  interval={Math.max(0, Math.floor(churnData.length / 8))}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  tickFormatter={(v) => `${v}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#111118",
+                    border: "1px solid #1e1e2e",
+                    borderRadius: "8px",
+                    color: "#f1f5f9",
+                  }}
+                  formatter={(v: number | undefined, name: string) => {
+                    if (name === "Churn Rate") return [`${v?.toFixed(2)}%`, name];
+                    return [v, name];
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="churnRate"
+                  name="Churn Rate"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  dot={{ fill: "#ef4444", r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Conversion Rate */}
+        <Card className="bg-[#111118] border-[#1e1e2e]">
+          <CardHeader>
+            <CardTitle className="text-[#f1f5f9] text-base">
+              Trial → Paid Conversion Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={conversionData.map((d) => ({
+                date: d.date,
+                conversionRate: d.conversionRate,
+                trialsStarted: d.trialsStarted,
+                trialsConverted: d.trialsConverted,
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+                <XAxis
+                  dataKey="date"
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  interval={Math.max(0, Math.floor(conversionData.length / 6))}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  style={{ fontSize: "11px" }}
+                  tickFormatter={(v) => `${v}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#111118",
+                    border: "1px solid #1e1e2e",
+                    borderRadius: "8px",
+                    color: "#f1f5f9",
+                  }}
+                  formatter={(v: number | undefined, name: string) => {
+                    if (name === "Conversion Rate") return [`${v?.toFixed(2)}%`, name];
+                    return [v, name];
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="conversionRate"
+                  name="Conversion Rate"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ fill: "#6366f1", r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
         {/* Daily Revenue */}
         <Card className="bg-[#111118] border-[#1e1e2e]">
           <CardHeader>
