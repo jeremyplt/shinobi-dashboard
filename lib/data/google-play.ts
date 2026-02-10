@@ -1,6 +1,7 @@
 /**
  * Google Play Developer Reporting API - crash/ANR rates
  * Uses the playdeveloperreporting v1beta1 API
+ * Requires service account to have Play Console access
  */
 
 import { google } from "googleapis";
