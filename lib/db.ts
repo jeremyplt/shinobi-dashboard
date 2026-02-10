@@ -31,7 +31,7 @@ export async function getHistoricalMetrics(
   const rows = await sql`
     SELECT *
     FROM daily_metrics
-    WHERE date >= CURRENT_DATE - ${days}
+    WHERE date >= CURRENT_DATE - CAST(${days} AS INTEGER)
     ORDER BY date ASC
   `;
   return rows as StoredMetrics[];
