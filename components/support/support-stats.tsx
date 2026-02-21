@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Bug,
   Mail,
+  MessagesSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SupportStats } from "@/lib/data/support";
@@ -92,6 +93,12 @@ export function SourceBreakdown({ stats }: { stats: SupportStats }) {
       count: stats.bySource?.email || 0,
       icon: Mail,
       color: "#22c55e",
+    },
+    {
+      label: "Discord",
+      count: stats.bySource?.discord || 0,
+      icon: MessagesSquare,
+      color: "#5865f2",
     },
   ];
 

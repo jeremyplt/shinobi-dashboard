@@ -6,7 +6,7 @@
 
 import { fetchReviews, type Review } from "@/lib/data/reviews";
 
-export type TicketSource = "review" | "sentry" | "email";
+export type TicketSource = "review" | "sentry" | "email" | "discord";
 export type TicketStatus = "open" | "replied" | "resolved" | "ignored";
 export type TicketPriority = "critical" | "high" | "medium" | "low";
 
@@ -131,6 +131,51 @@ export async function fetchSupportData(): Promise<{
     console.error("Support: failed to fetch Sentry issues", e);
   }
 
+  // 3. Fetch Discord feedback
+  try {
+    const discordToken = process.env.DISCORD_BOT_TOKEN;
+    const bugReportChannel = "1280058442593337377";
+    if (discordToken) {
+      const res = await fetch(
+        `https://discord.com/api/v10/channels/${bugReportChannel}/messages?limit=20`,
+        {
+          headers: { Authorization: `Bot ${discordToken}` },
+          next: { revalidate: 300 },
+        }
+      );
+      if (res.ok) {
+        const messages = await res.json();
+        for (const msg of messages) {
+          const content = msg.content || "";
+          // Parse webhook format: **User Email:** ... **Message:** ...
+          const emailMatch = content.match(/\*\*User Email:\*\*\s*(.+)/);
+          const messageMatch = content.match(/\*\*Message:\*\*\s*(.+?)(?:\n|$)/);
+          const messageEnMatch = content.match(/\*\*Message \(English\):\*\*\s*(.+?)(?:\n|$)/);
+          const storyMatch = content.match(/\*\*Story Title:\*\*\s*(.+?)(?:\n|$)/);
+
+          const feedbackText = messageEnMatch?.[1] || messageMatch?.[1] || content.substring(0, 200);
+          const email = emailMatch?.[1]?.trim() || "Unknown";
+          const storyTitle = storyMatch?.[1]?.trim();
+
+          tickets.push({
+            id: `discord-${msg.id}`,
+            source: "discord",
+            title: storyTitle ? `Feedback on: ${storyTitle}` : "In-app Feedback",
+            body: feedbackText,
+            author: email,
+            authorEmail: email,
+            priority: "medium",
+            status: "open",
+            createdAt: msg.timestamp,
+            metadata: storyTitle ? { story: storyTitle } : undefined,
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Support: failed to fetch Discord feedback", e);
+  }
+
   // Sort by priority then date
   const priorityOrder: Record<TicketPriority, number> = {
     critical: 0,
@@ -145,7 +190,7 @@ export async function fetchSupportData(): Promise<{
   });
 
   // Calculate stats
-  const bySource: Record<TicketSource, number> = { review: 0, sentry: 0, email: 0 };
+  const bySource: Record<TicketSource, number> = { review: 0, sentry: 0, email: 0, discord: 0 };
   const byPriority: Record<TicketPriority, number> = { critical: 0, high: 0, medium: 0, low: 0 };
   let open = 0;
   let replied = 0;
