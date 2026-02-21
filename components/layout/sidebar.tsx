@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
   Headphones,
+  GitPullRequest,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +26,8 @@ const navigation = [
   { name: "Revenue", href: "/dashboard/revenue", icon: DollarSign, shortcut: "4" },
   { name: "Errors", href: "/dashboard/errors", icon: AlertCircle, shortcut: "5" },
   { name: "Support", href: "/dashboard/support", icon: Headphones, shortcut: "6" },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings, shortcut: "7" },
+  { name: "PR Queue", href: "/dashboard/prs", icon: GitPullRequest, shortcut: "7" },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings, shortcut: "8" },
 ];
 
 export function Sidebar() {
