@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Bug,
   Mail,
+  MessagesSquare,
   Apple,
   Smartphone,
   Clock,
@@ -33,6 +34,7 @@ const sourceIcons: Record<string, typeof Star> = {
   review: MessageSquare,
   sentry: Bug,
   email: Mail,
+  discord: MessagesSquare,
 };
 
 function StarRating({ rating }: { rating: number }) {

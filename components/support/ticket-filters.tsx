@@ -60,6 +60,7 @@ export function TicketFilters({ filters, onChange, resultCount }: TicketFiltersP
             <SelectItem value="review" className="text-[#94a3b8] text-xs">Reviews</SelectItem>
             <SelectItem value="sentry" className="text-[#94a3b8] text-xs">Sentry</SelectItem>
             <SelectItem value="email" className="text-[#94a3b8] text-xs">Email</SelectItem>
+            <SelectItem value="discord" className="text-[#94a3b8] text-xs">Discord</SelectItem>
           </SelectContent>
         </Select>
 
